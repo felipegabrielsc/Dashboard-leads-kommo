@@ -15,6 +15,7 @@ import {
   filterAnalysis,
   filterDays,
   isSlice,
+  motiveFilterCategories,
   toggleList,
   visibleCategories,
 } from "@/lib/filters";
@@ -22,6 +23,7 @@ import { addDays, formatDate, formatInt, formatMonth, monthBounds, monthKey, tod
 import { buildBuckets, buildMonthRows, computeTotals, topMotives, weekdayLoads } from "@/lib/metrics";
 import { mergeStates, parseWorkbook } from "@/lib/parseSheet";
 import { normalizeState, useLeads } from "@/lib/store";
+import { SetupScreen } from "@/components/SetupScreen";
 import type { DayRecord, Filters, GroupId, LeadState } from "@/lib/types";
 
 type Tab = "painel" | "lancamentos" | "analise";
@@ -65,6 +67,17 @@ export function DashboardApp() {
     for (const lead of state.analysis) if (lead.date) keys.add(monthKey(lead.date));
     return [...keys].sort();
   }, [state.analysis, state.days]);
+
+  if (!leads.configured) return <SetupScreen />;
+
+  if (leads.ready && leads.loadError) {
+    return (
+      <main className="mx-auto flex min-h-screen max-w-xl flex-col justify-center px-4 py-16">
+        <h1 className="font-serif text-4xl">Não consegui abrir o banco</h1>
+        <p className="mt-4 text-sm leading-relaxed text-wine">{leads.loadError}</p>
+      </main>
+    );
+  }
 
   if (!leads.ready) {
     return (
@@ -134,7 +147,7 @@ export function DashboardApp() {
     }
     setEditor(undefined);
     setTab("lancamentos");
-    setNotice(`Dia ${formatDate(day.date)} salvo neste navegador.`);
+    setNotice(`Dia ${formatDate(day.date)} salvo na conta.`);
     return null;
   }
 
@@ -194,15 +207,19 @@ export function DashboardApp() {
               onClick={() => {
                 if (
                   window.confirm(
-                    "Isso substitui os lançamentos deste navegador pela planilha original. Um backup exportado não é apagado.",
+                    "Isso substitui os lançamentos da conta pela planilha original. Um backup exportado não é apagado.",
                   )
                 ) {
                   leads.reset();
-                  setNotice("Planilha original restaurada neste navegador.");
+                  setNotice("Planilha original restaurada na conta.");
                 }
               }}
             >
               Restaurar
+            </button>
+            {leads.email && <span className="self-center text-sm text-mute">{leads.email}</span>}
+            <button type="button" className="btn" onClick={leads.signOut}>
+              Sair
             </button>
             <input
               ref={fileRef}
@@ -259,14 +276,16 @@ export function DashboardApp() {
         </nav>
       </header>
 
-      {notice && (
+      {(notice || leads.saveError) && (
         <div className="mx-auto mt-4 flex max-w-[1440px] items-center justify-between gap-3 px-4">
-          <p className="rounded-2xl bg-pineSoft px-4 py-2 text-sm text-pine" role="status">
-            {notice}
+          <p className={`rounded-2xl px-4 py-2 text-sm ${leads.saveError ? "bg-wineSoft text-wine" : "bg-pineSoft text-pine"}`} role="status">
+            {leads.saveError || notice}
           </p>
-          <button type="button" className="text-sm text-mute" onClick={() => setNotice("")}>
-            Fechar
-          </button>
+          {!leads.saveError && (
+            <button type="button" className="text-sm text-mute" onClick={() => setNotice("")}>
+              Fechar
+            </button>
+          )}
         </div>
       )}
 
@@ -316,7 +335,7 @@ export function DashboardApp() {
       </main>
 
       <footer className="mx-auto max-w-[1440px] px-4 py-8 text-sm text-mute">
-        Os lançamentos ficam salvos neste navegador. Exporte um backup para abrir em outro computador ou para não perder o que você adicionou.
+        Os lançamentos ficam salvos na conta do Supabase. Quem entra com login vê os mesmos dados.
         A conferência ✅ significa que o dia está completo; ❌ significa que ainda há lead em análise.
       </footer>
 
@@ -532,7 +551,7 @@ function FilterBar({
             {GROUP_META[group].label}
           </button>
         ))}
-        {categories.map((category) => (
+        {motiveFilterCategories(categories).map((category) => (
           <button
             key={category.id}
             type="button"

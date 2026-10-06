@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import seed from "../data/seed.json";
 import { normalizeState } from "./store";
 import { computeTotals } from "./metrics";
-import { defaultFilters, filterDays } from "./filters";
+import { GROUP_META, normalizeLabel, shortLabel } from "./categories";
+import { defaultFilters, filterDays, motiveFilterCategories } from "./filters";
 
 const state = normalizeState(seed);
 assert.ok(state, "seed normaliza");
@@ -41,5 +42,14 @@ assert.deepEqual(
   pending.map((day) => day.date),
   ["2026-09-11", "2026-09-29"],
 );
+
+const motiveLabels = motiveFilterCategories(state.categories).map((category) =>
+  normalizeLabel(shortLabel(category)),
+);
+const groupLabels = new Set(Object.values(GROUP_META).map((group) => normalizeLabel(group.label)));
+for (const label of motiveLabels) {
+  assert.equal(groupLabels.has(label), false, `filtro duplicado: ${label}`);
+}
+assert.equal(motiveLabels.includes("sem retorno"), false);
 
 console.log("metrics ok");
