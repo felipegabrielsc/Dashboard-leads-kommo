@@ -1,0 +1,1714 @@
+{
+  "version": 1,
+  "source": "relatorio-leads.xlsx",
+  "categories": [
+    {
+      "id": "comprou",
+      "label": "Comprou",
+      "group": "interesse",
+      "builtin": true
+    },
+    {
+      "id": "interessado_sem_resposta",
+      "label": "Interessado mas sem resposta",
+      "group": "interesse",
+      "builtin": true
+    },
+    {
+      "id": "compra_futura",
+      "label": "Compra Futura",
+      "group": "interesse",
+      "builtin": true
+    },
+    {
+      "id": "sem_retorno",
+      "label": "Sem Retorno",
+      "group": "sem_retorno",
+      "builtin": true
+    },
+    {
+      "id": "orcamento_insuficiente",
+      "label": "Orçamento insuficiente",
+      "group": "perdidos",
+      "builtin": true
+    },
+    {
+      "id": "produto_nao_encaixa",
+      "label": "O produto não se encaixa à necessidade",
+      "group": "perdidos",
+      "builtin": true
+    },
+    {
+      "id": "nao_satisfeito",
+      "label": "Não satisfeito com as condições",
+      "group": "perdidos",
+      "builtin": true
+    },
+    {
+      "id": "concorrente",
+      "label": "Comprado do concorrente",
+      "group": "perdidos",
+      "builtin": true
+    },
+    {
+      "id": "curriculo",
+      "label": "Currículo (busca de emprego)",
+      "group": "perdidos",
+      "builtin": true
+    },
+    {
+      "id": "fora_regiao",
+      "label": "Fora da região",
+      "group": "perdidos",
+      "builtin": true
+    },
+    {
+      "id": "engano",
+      "label": "Engano",
+      "group": "perdidos",
+      "builtin": true
+    },
+    {
+      "id": "outros",
+      "label": "Outros (Não contabilizado aos leads)",
+      "group": "perdidos",
+      "builtin": true
+    }
+  ],
+  "days": [
+    {
+      "date": "2026-06-23",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 2,
+        "compra_futura": 2,
+        "sem_retorno": 8,
+        "orcamento_insuficiente": 1,
+        "produto_nao_encaixa": 1,
+        "nao_satisfeito": 1,
+        "concorrente": 0,
+        "curriculo": 4,
+        "fora_regiao": 0,
+        "engano": 2,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-06-24",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 5,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 0,
+        "fora_regiao": 0,
+        "engano": 2,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-06-25",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 1,
+        "compra_futura": 3,
+        "sem_retorno": 3,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 1,
+        "fora_regiao": 0,
+        "engano": 2,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-06-26",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 8,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 2,
+        "fora_regiao": 0,
+        "engano": 0,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-06-27",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": 6,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 4,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 0,
+        "fora_regiao": 0,
+        "engano": 2,
+        "outros": 1
+      }
+    },
+    {
+      "date": "2026-06-28",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 2,
+        "compra_futura": 0,
+        "sem_retorno": 2,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 1,
+        "fora_regiao": 0,
+        "engano": 2,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-06-29",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 1,
+        "sem_retorno": 5,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 3,
+        "fora_regiao": 0,
+        "engano": 1,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-06-30",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 3,
+        "compra_futura": 0,
+        "sem_retorno": 11,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 4,
+        "fora_regiao": 0,
+        "engano": 1,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-07-01",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 1,
+        "compra_futura": 0,
+        "sem_retorno": 3,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 1,
+        "fora_regiao": 0,
+        "engano": 2,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-07-02",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 3,
+        "compra_futura": 0,
+        "sem_retorno": 5,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 3,
+        "fora_regiao": 0,
+        "engano": 0,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-07-03",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 2,
+        "compra_futura": 0,
+        "sem_retorno": 10,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 3,
+        "fora_regiao": 0,
+        "engano": 3,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-07-04",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 1,
+        "interessado_sem_resposta": 2,
+        "compra_futura": 1,
+        "sem_retorno": 7,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 1,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 0,
+        "fora_regiao": 0,
+        "engano": 1,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-07-05",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 1,
+        "compra_futura": 0,
+        "sem_retorno": 6,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 2,
+        "fora_regiao": 0,
+        "engano": 0,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-07-06",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 12,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 3,
+        "fora_regiao": 0,
+        "engano": 3,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-07-07",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 1,
+        "interessado_sem_resposta": 1,
+        "compra_futura": 0,
+        "sem_retorno": 16,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 1,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 3,
+        "fora_regiao": 0,
+        "engano": 2,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-07-08",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 1,
+        "sem_retorno": 9,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 2,
+        "fora_regiao": 0,
+        "engano": 0,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-07-09",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 2,
+        "compra_futura": 0,
+        "sem_retorno": 4,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 3,
+        "fora_regiao": 0,
+        "engano": 3,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-07-10",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": 14,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 8,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 4,
+        "fora_regiao": 0,
+        "engano": 2,
+        "outros": 1
+      }
+    },
+    {
+      "date": "2026-07-11",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 1,
+        "compra_futura": 1,
+        "sem_retorno": 6,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 0,
+        "fora_regiao": 0,
+        "engano": 3,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-07-12",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 5,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 0,
+        "fora_regiao": 0,
+        "engano": 0,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-07-13",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 4,
+        "compra_futura": 0,
+        "sem_retorno": 8,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 2,
+        "fora_regiao": 0,
+        "engano": 3,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-07-14",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 2,
+        "compra_futura": 0,
+        "sem_retorno": 7,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 7,
+        "fora_regiao": 0,
+        "engano": 3,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-07-15",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 3,
+        "compra_futura": 0,
+        "sem_retorno": 4,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 1,
+        "nao_satisfeito": 0,
+        "concorrente": 1,
+        "curriculo": 5,
+        "fora_regiao": 0,
+        "engano": 6,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-07-16",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 4,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 1,
+        "nao_satisfeito": 0,
+        "concorrente": 1,
+        "curriculo": 5,
+        "fora_regiao": 0,
+        "engano": 1,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-07-17",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 2,
+        "compra_futura": 1,
+        "sem_retorno": 4,
+        "orcamento_insuficiente": 1,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 3,
+        "fora_regiao": 0,
+        "engano": 2,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-07-18",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 2,
+        "compra_futura": 0,
+        "sem_retorno": 3,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 5,
+        "fora_regiao": 0,
+        "engano": 3,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-07-19",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 2,
+        "compra_futura": 0,
+        "sem_retorno": 6,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 7,
+        "fora_regiao": 0,
+        "engano": 4,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-07-20",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 5,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 14,
+        "fora_regiao": 0,
+        "engano": 1,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-07-21",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 3,
+        "compra_futura": 0,
+        "sem_retorno": 3,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 1,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 15,
+        "fora_regiao": 0,
+        "engano": 0,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-07-22",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 2,
+        "compra_futura": 0,
+        "sem_retorno": 4,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 5,
+        "fora_regiao": 0,
+        "engano": 5,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-07-23",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 1,
+        "sem_retorno": 6,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 6,
+        "fora_regiao": 0,
+        "engano": 0,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-07-24",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 4,
+        "compra_futura": 0,
+        "sem_retorno": 7,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 8,
+        "fora_regiao": 0,
+        "engano": 3,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-07-25",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 2,
+        "compra_futura": 0,
+        "sem_retorno": 7,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 4,
+        "fora_regiao": 0,
+        "engano": 5,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-07-26",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": 16,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 2,
+        "compra_futura": 0,
+        "sem_retorno": 7,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 3,
+        "fora_regiao": 0,
+        "engano": 4,
+        "outros": 1
+      }
+    },
+    {
+      "date": "2026-07-27",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": 22,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 1,
+        "compra_futura": 1,
+        "sem_retorno": 7,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 11,
+        "fora_regiao": 0,
+        "engano": 2,
+        "outros": 1
+      }
+    },
+    {
+      "date": "2026-07-28",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 1,
+        "compra_futura": 0,
+        "sem_retorno": 9,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 7,
+        "fora_regiao": 0,
+        "engano": 2,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-07-29",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": 12,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 3,
+        "compra_futura": 0,
+        "sem_retorno": 5,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 1,
+        "fora_regiao": 0,
+        "engano": 3,
+        "outros": 2
+      }
+    },
+    {
+      "date": "2026-08-19",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 12,
+        "orcamento_insuficiente": 1,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 10,
+        "fora_regiao": 0,
+        "engano": 3,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-08-20",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 1,
+        "sem_retorno": 18,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 14,
+        "fora_regiao": 0,
+        "engano": 2,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-08-21",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 9,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 6,
+        "fora_regiao": 0,
+        "engano": 3,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-08-22",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 2,
+        "sem_retorno": 13,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 5,
+        "fora_regiao": 0,
+        "engano": 5,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-08-23",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 1,
+        "sem_retorno": 19,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 5,
+        "fora_regiao": 0,
+        "engano": 3,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-08-24",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 1,
+        "compra_futura": 1,
+        "sem_retorno": 10,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 23,
+        "fora_regiao": 0,
+        "engano": 3,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-08-25",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 9,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 9,
+        "fora_regiao": 0,
+        "engano": 2,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-08-26",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": 34,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 9,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 24,
+        "fora_regiao": 0,
+        "engano": 1,
+        "outros": 2
+      }
+    },
+    {
+      "date": "2026-08-27",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 6,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 14,
+        "fora_regiao": 0,
+        "engano": 1,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-08-28",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 1,
+        "compra_futura": 0,
+        "sem_retorno": 6,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 7,
+        "fora_regiao": 0,
+        "engano": 0,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-08-29",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 8,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 4,
+        "fora_regiao": 0,
+        "engano": 3,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-08-30",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 10,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 9,
+        "fora_regiao": 0,
+        "engano": 3,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-08-31",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": 31,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 2,
+        "compra_futura": 0,
+        "sem_retorno": 12,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 14,
+        "fora_regiao": 0,
+        "engano": 3,
+        "outros": 3
+      }
+    },
+    {
+      "date": "2026-09-01",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 13,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 23,
+        "fora_regiao": 0,
+        "engano": 5,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-09-02",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 1,
+        "sem_retorno": 7,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 20,
+        "fora_regiao": 0,
+        "engano": 6,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-09-03",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": 31,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 8,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 19,
+        "fora_regiao": 0,
+        "engano": 4,
+        "outros": 1
+      }
+    },
+    {
+      "date": "2026-09-04",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": 19,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 1,
+        "sem_retorno": 2,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 14,
+        "fora_regiao": 0,
+        "engano": 2,
+        "outros": 2
+      }
+    },
+    {
+      "date": "2026-09-05",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 1,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 6,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 6,
+        "fora_regiao": 0,
+        "engano": 3,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-09-06",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 1,
+        "compra_futura": 0,
+        "sem_retorno": 6,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 5,
+        "fora_regiao": 0,
+        "engano": 0,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-09-07",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 8,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 9,
+        "fora_regiao": 0,
+        "engano": 3,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-09-08",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 1,
+        "compra_futura": 0,
+        "sem_retorno": 6,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 15,
+        "fora_regiao": 0,
+        "engano": 7,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-09-09",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": 28,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 12,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 16,
+        "fora_regiao": 0,
+        "engano": 0,
+        "outros": 1
+      }
+    },
+    {
+      "date": "2026-09-10",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 1,
+        "sem_retorno": 4,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 12,
+        "fora_regiao": 0,
+        "engano": 1,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-09-11",
+      "review": "pendente",
+      "pendingCount": 1,
+      "declaredQuantity": 11,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 5,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 5,
+        "fora_regiao": 0,
+        "engano": 1,
+        "outros": 1
+      }
+    },
+    {
+      "date": "2026-09-12",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 1,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 4,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 1,
+        "curriculo": 7,
+        "fora_regiao": 0,
+        "engano": 1,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-09-13",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 6,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 7,
+        "fora_regiao": 0,
+        "engano": 1,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-09-14",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 7,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 15,
+        "fora_regiao": 0,
+        "engano": 2,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-09-15",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": 8,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 3,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 5,
+        "fora_regiao": 0,
+        "engano": 0,
+        "outros": 1
+      }
+    },
+    {
+      "date": "2026-09-16",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 2,
+        "sem_retorno": 6,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 10,
+        "fora_regiao": 0,
+        "engano": 3,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-09-17",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 4,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 22,
+        "fora_regiao": 0,
+        "engano": 2,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-09-18",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 1,
+        "compra_futura": 0,
+        "sem_retorno": 4,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 4,
+        "fora_regiao": 0,
+        "engano": 1,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-09-19",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 8,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 2,
+        "fora_regiao": 0,
+        "engano": 0,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-09-20",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 7,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 5,
+        "fora_regiao": 0,
+        "engano": 4,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-09-21",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 1,
+        "compra_futura": 0,
+        "sem_retorno": 9,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 11,
+        "fora_regiao": 0,
+        "engano": 2,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-09-22",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 6,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 8,
+        "fora_regiao": 0,
+        "engano": 2,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-09-23",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 3,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 12,
+        "fora_regiao": 0,
+        "engano": 0,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-09-24",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 3,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 7,
+        "fora_regiao": 0,
+        "engano": 1,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-09-25",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": 13,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 2,
+        "compra_futura": 0,
+        "sem_retorno": 3,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 6,
+        "fora_regiao": 0,
+        "engano": 2,
+        "outros": 1
+      }
+    },
+    {
+      "date": "2026-09-26",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 2,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 3,
+        "fora_regiao": 0,
+        "engano": 1,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-09-27",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 4,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 0,
+        "fora_regiao": 0,
+        "engano": 2,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-09-28",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 11,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 7,
+        "fora_regiao": 0,
+        "engano": 0,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-09-29",
+      "review": "pendente",
+      "pendingCount": 1,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 3,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 7,
+        "fora_regiao": 0,
+        "engano": 1,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-09-30",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 4,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 2,
+        "fora_regiao": 0,
+        "engano": 0,
+        "outros": 0
+      }
+    },
+    {
+      "date": "2026-10-01",
+      "review": "ok",
+      "pendingCount": 0,
+      "declaredQuantity": null,
+      "counts": {
+        "comprou": 0,
+        "interessado_sem_resposta": 0,
+        "compra_futura": 0,
+        "sem_retorno": 3,
+        "orcamento_insuficiente": 0,
+        "produto_nao_encaixa": 0,
+        "nao_satisfeito": 0,
+        "concorrente": 0,
+        "curriculo": 5,
+        "fora_regiao": 0,
+        "engano": 2,
+        "outros": 0
+      }
+    }
+  ],
+  "analysis": [
+    {
+      "id": "analise-1",
+      "phone": "5511942192114",
+      "date": "2026-09-11",
+      "description": ""
+    },
+    {
+      "id": "analise-2",
+      "phone": "5519990093000",
+      "date": "2026-09-29",
+      "description": ""
+    }
+  ]
+}
