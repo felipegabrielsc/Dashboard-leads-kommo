@@ -1,0 +1,97 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(1200px 500px at 100% -10%, rgba(27, 107, 67, 0.08), transparent 55%),
+    radial-gradient(900px 420px at -10% 0%, rgba(138, 90, 18, 0.08), transparent 50%),
+    #f3efe6;
+  color: #1c1915;
+}
+
+::selection {
+  background: #e7d7b4;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+summary {
+  list-style: none;
+}
+
+summary::-webkit-details-marker {
+  display: none;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  margin: 0;
+}
+
+.sheet-scroll {
+  max-height: min(72vh, 820px);
+  overflow: auto;
+}
+
+.sheet-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.sheet-scroll tfoot td {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+}
+
+.sheet-scroll .sticky-col {
+  position: sticky;
+  z-index: 3;
+}
+
+.sheet-scroll thead .sticky-col,
+.sheet-scroll tfoot .sticky-col {
+  z-index: 4;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-line bg-card px-3.5 py-2 text-sm font-medium text-ink shadow-sm transition hover:border-ink/30;
+  }
+
+  .btn-primary {
+    @apply border-ink bg-ink text-paper hover:bg-ink/90;
+  }
+
+  .btn-danger {
+    @apply border-wine/30 text-wine hover:bg-wineSoft;
+  }
+
+  .chip {
+    @apply inline-flex items-center rounded-full border border-line bg-card px-3 py-1.5 text-sm text-ink transition hover:border-ink/30;
+  }
+
+  .chip-on {
+    @apply border-ink bg-ink text-paper;
+  }
+
+  .field {
+    @apply w-full rounded-xl border border-line bg-white px-3 py-2 text-sm outline-none ring-brass/30 focus:border-brass focus:ring-2;
+  }
+
+  .panel {
+    @apply rounded-3xl border border-line/80 bg-card shadow-card;
+  }
+}
