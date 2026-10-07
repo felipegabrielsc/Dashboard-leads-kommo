@@ -1,3 +1,4 @@
+import { GROUP_META, normalizeLabel, shortLabel } from "./categories";
 import { weekdayIndex, monthKey } from "./format";
 import { isDivergent } from "./metrics";
 import type { AnalysisLead, Category, DayRecord, Filters, GroupId } from "./types";
@@ -18,6 +19,13 @@ export function defaultFilters(): Filters {
 
 export function isSlice(filters: Filters): boolean {
   return filters.groups.length > 0 || filters.motives.length > 0;
+}
+
+export function motiveFilterCategories(categories: Category[]): Category[] {
+  return categories.filter((category) => {
+    const groupLabel = normalizeLabel(GROUP_META[category.group].label);
+    return normalizeLabel(shortLabel(category)) !== groupLabel;
+  });
 }
 
 export function visibleCategories(categories: Category[], filters: Filters): Category[] {

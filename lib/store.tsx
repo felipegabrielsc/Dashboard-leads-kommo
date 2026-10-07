@@ -5,14 +5,30 @@ import {
   useContext,
   useEffect,
   useReducer,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
-import seedJson from "../data/seed.json";
-import { slugify, withBuiltins } from "./categories";
+import { slugify } from "./categories";
+import { seedState } from "./normalize";
+import {
+  deleteAnalysis as deleteAnalysisRemote,
+  deleteCategory as deleteCategoryRemote,
+  deleteDay as deleteDayRemote,
+  fetchState,
+  insertCategory,
+  reconcileDay,
+  renameCategory as renameCategoryRemote,
+  saveAnalysis as saveAnalysisRemote,
+  saveCell,
+  saveDay as saveDayRemote,
+  syncState,
+} from "./remote";
+import { createSupabaseBrowser, explainSupabaseError } from "./supabase";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AnalysisLead, Category, DayRecord, GroupId, LeadState } from "./types";
 
-const STORAGE_KEY = "kommo-leads-v1";
+export { normalizeState, seedState } from "./normalize";
 
 type Action =
   | { type: "replace"; state: LeadState }
@@ -21,7 +37,7 @@ type Action =
   | { type: "patch-cell"; date: string; categoryId: string; value: number }
   | { type: "delete-day"; date: string }
   | { type: "reconcile"; date: string }
-  | { type: "add-category"; label: string; group: GroupId }
+  | { type: "add-category"; category: Category }
   | { type: "rename-category"; id: string; label: string }
   | { type: "delete-category"; id: string }
   | { type: "save-analysis"; lead: AnalysisLead }
@@ -29,83 +45,6 @@ type Action =
 
 function sortDays(days: DayRecord[]): DayRecord[] {
   return [...days].sort((a, b) => a.date.localeCompare(b.date));
-}
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  return value as Record<string, unknown>;
-}
-
-export function normalizeState(raw: unknown): LeadState | null {
-  const record = asRecord(raw);
-  if (!record) return null;
-  const categoriesRaw = Array.isArray(record.categories) ? record.categories : [];
-  const categories: Category[] = [];
-  for (const item of categoriesRaw) {
-    const category = asRecord(item);
-    if (!category) continue;
-    const id = typeof category.id === "string" ? category.id : "";
-    const label = typeof category.label === "string" ? category.label.trim() : "";
-    const group = category.group;
-    if (!id || !label) continue;
-    if (group !== "interesse" && group !== "sem_retorno" && group !== "perdidos") continue;
-    categories.push({
-      id,
-      label,
-      group,
-      builtin: Boolean(category.builtin),
-    });
-  }
-  const daysRaw = Array.isArray(record.days) ? record.days : [];
-  const days: DayRecord[] = [];
-  for (const item of daysRaw) {
-    const day = asRecord(item);
-    if (!day || typeof day.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(day.date)) continue;
-    const counts: Record<string, number> = {};
-    const source = asRecord(day.counts) || {};
-    for (const [key, value] of Object.entries(source)) {
-      const number = typeof value === "number" ? value : Number(value);
-      if (Number.isFinite(number)) counts[key] = Math.max(0, Math.round(number));
-    }
-    const declared = day.declaredQuantity;
-    days.push({
-      date: day.date,
-      review: day.review === "pendente" ? "pendente" : "ok",
-      pendingCount:
-        day.review === "pendente"
-          ? Math.max(1, Math.round(Number(day.pendingCount) || 1))
-          : 0,
-      declaredQuantity:
-        typeof declared === "number" && Number.isFinite(declared) ? Math.round(declared) : null,
-      counts,
-    });
-  }
-  const analysisRaw = Array.isArray(record.analysis) ? record.analysis : [];
-  const analysis: AnalysisLead[] = [];
-  for (const item of analysisRaw) {
-    const lead = asRecord(item);
-    if (!lead) continue;
-    const phone = typeof lead.phone === "string" ? lead.phone.trim() : String(lead.phone ?? "").trim();
-    if (!phone) continue;
-    analysis.push({
-      id: typeof lead.id === "string" && lead.id ? lead.id : `analise-${crypto.randomUUID()}`,
-      phone,
-      date: typeof lead.date === "string" ? lead.date : "",
-      description: typeof lead.description === "string" ? lead.description : "",
-    });
-  }
-  return {
-    version: 1,
-    categories: withBuiltins(categories),
-    days: sortDays(days),
-    analysis,
-  };
-}
-
-export function seedState(): LeadState {
-  const state = normalizeState(seedJson);
-  if (!state) throw new Error("A base inicial da planilha está inválida.");
-  return state;
 }
 
 function reducer(state: LeadState, action: Action): LeadState {
@@ -138,19 +77,13 @@ function reducer(state: LeadState, action: Action): LeadState {
           day.date === action.date ? { ...day, declaredQuantity: null } : day,
         ),
       };
-    case "add-category": {
-      const label = action.label.trim();
-      if (!label) return state;
-      let id = slugify(label);
-      let n = 2;
-      while (state.categories.some((category) => category.id === id)) {
-        id = `${slugify(label)}_${n++}`;
-      }
+    case "add-category":
       return {
         ...state,
-        categories: [...state.categories, { id, label, group: action.group, builtin: false }],
+        categories: state.categories.some((category) => category.id === action.category.id)
+          ? state.categories
+          : [...state.categories, action.category],
       };
-    }
     case "rename-category":
       return {
         ...state,
@@ -189,6 +122,10 @@ function reducer(state: LeadState, action: Action): LeadState {
 
 type Store = {
   ready: boolean;
+  configured: boolean;
+  email: string | null;
+  loadError: string;
+  saveError: string;
   state: LeadState;
   replace: (state: LeadState) => void;
   reset: () => void;
@@ -201,6 +138,7 @@ type Store = {
   deleteCategory: (id: string) => void;
   saveAnalysis: (lead: AnalysisLead) => void;
   deleteAnalysis: (id: string) => void;
+  signOut: () => void;
 };
 
 const StoreContext = createContext<Store | null>(null);
@@ -208,39 +146,147 @@ const StoreContext = createContext<Store | null>(null);
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, seedState);
   const [ready, setReady] = useState(false);
+  const [configured, setConfigured] = useState(true);
+  const [email, setEmail] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const clientRef = useRef<SupabaseClient | null>(null);
+  const stateRef = useRef(state);
+  const writes = useRef(0);
+  stateRef.current = state;
+
+  async function run(task: (client: SupabaseClient) => Promise<void>) {
+    const client = clientRef.current;
+    if (!client) return;
+    writes.current += 1;
+    try {
+      await task(client);
+      setSaveError("");
+    } catch (error) {
+      setSaveError(explainSupabaseError(error));
+    } finally {
+      writes.current -= 1;
+    }
+  }
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = normalizeState(JSON.parse(raw));
-        if (parsed) dispatch({ type: "replace", state: parsed });
-      }
-    } catch {
-      /* mantém a planilha inicial */
+    const client = createSupabaseBrowser();
+    clientRef.current = client;
+    if (!client) {
+      setConfigured(false);
+      setReady(true);
+      return;
     }
-    setReady(true);
+    let cancel = false;
+    async function load(active: SupabaseClient) {
+      const { data } = await active.auth.getUser();
+      if (cancel) return;
+      setEmail(data.user?.email ?? null);
+      let loaded = await fetchState(active);
+      if (!loaded.days.length && !loaded.analysis.length && loaded.categories.every((category) => category.builtin)) {
+        const seed = seedState();
+        await syncState(active, seed);
+        loaded = seed;
+      }
+      if (cancel) return;
+      dispatch({ type: "replace", state: loaded });
+      setReady(true);
+    }
+    load(client).catch((error) => {
+      if (cancel) return;
+      setLoadError(explainSupabaseError(error));
+      setReady(true);
+    });
+    return () => {
+      cancel = true;
+    };
   }, []);
 
   useEffect(() => {
-    if (!ready) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [ready, state]);
+    function onFocus() {
+      const client = clientRef.current;
+      if (!client || !ready || writes.current > 0) return;
+      fetchState(client)
+        .then((fresh) => {
+          if (writes.current > 0) return;
+          dispatch({ type: "replace", state: fresh });
+        })
+        .catch((error) => setSaveError(explainSupabaseError(error)));
+    }
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [ready]);
 
   const store: Store = {
     ready,
+    configured,
+    email,
+    loadError,
+    saveError,
     state,
-    replace: (next) => dispatch({ type: "replace", state: next }),
-    reset: () => dispatch({ type: "reset", state: seedState() }),
-    saveDay: (day) => dispatch({ type: "save-day", day }),
-    patchCell: (date, categoryId, value) => dispatch({ type: "patch-cell", date, categoryId, value }),
-    deleteDay: (date) => dispatch({ type: "delete-day", date }),
-    reconcile: (date) => dispatch({ type: "reconcile", date }),
-    addCategory: (label, group) => dispatch({ type: "add-category", label, group }),
-    renameCategory: (id, label) => dispatch({ type: "rename-category", id, label }),
-    deleteCategory: (id) => dispatch({ type: "delete-category", id }),
-    saveAnalysis: (lead) => dispatch({ type: "save-analysis", lead }),
-    deleteAnalysis: (id) => dispatch({ type: "delete-analysis", id }),
+    replace: (next) => {
+      dispatch({ type: "replace", state: next });
+      void run((client) => syncState(client, next));
+    },
+    reset: () => {
+      const seed = seedState();
+      dispatch({ type: "reset", state: seed });
+      void run((client) => syncState(client, seed));
+    },
+    saveDay: (day) => {
+      dispatch({ type: "save-day", day });
+      void run((client) => saveDayRemote(client, day));
+    },
+    patchCell: (date, categoryId, value) => {
+      dispatch({ type: "patch-cell", date, categoryId, value });
+      void run((client) => saveCell(client, date, categoryId, value));
+    },
+    deleteDay: (date) => {
+      dispatch({ type: "delete-day", date });
+      void run((client) => deleteDayRemote(client, date));
+    },
+    reconcile: (date) => {
+      dispatch({ type: "reconcile", date });
+      void run((client) => reconcileDay(client, date));
+    },
+    addCategory: (label, group) => {
+      const trimmed = label.trim();
+      if (!trimmed) return;
+      let id = slugify(trimmed);
+      let n = 2;
+      while (stateRef.current.categories.some((category) => category.id === id)) {
+        id = `${slugify(trimmed)}_${n++}`;
+      }
+      const category: Category = { id, label: trimmed, group, builtin: false };
+      const position = stateRef.current.categories.length;
+      dispatch({ type: "add-category", category });
+      void run((client) => insertCategory(client, category, position));
+    },
+    renameCategory: (id, label) => {
+      const trimmed = label.trim();
+      if (!trimmed) return;
+      dispatch({ type: "rename-category", id, label: trimmed });
+      void run((client) => renameCategoryRemote(client, id, trimmed));
+    },
+    deleteCategory: (id) => {
+      const category = stateRef.current.categories.find((item) => item.id === id);
+      if (!category || category.builtin) return;
+      dispatch({ type: "delete-category", id });
+      void run((client) => deleteCategoryRemote(client, id));
+    },
+    saveAnalysis: (lead) => {
+      dispatch({ type: "save-analysis", lead });
+      void run((client) => saveAnalysisRemote(client, lead));
+    },
+    deleteAnalysis: (id) => {
+      dispatch({ type: "delete-analysis", id });
+      void run((client) => deleteAnalysisRemote(client, id));
+    },
+    signOut: () => {
+      void clientRef.current?.auth.signOut().finally(() => {
+        window.location.assign("/login");
+      });
+    },
   };
 
   return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
