@@ -48,4 +48,6 @@ revoke insert, update, delete on public.analysis_leads from anon;
 grant select on public.categories to anon;
 grant select on public.days to anon;
 grant select on public.day_counts to anon;
-grant select on public.analysis_leads to anon;
+revoke select on table public.analysis_leads from anon;
+revoke select (id, phone, day, description) on public.analysis_leads from anon;
+grant select (id, day, description) on public.analysis_leads to anon;

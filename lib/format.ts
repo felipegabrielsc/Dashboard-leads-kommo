@@ -49,6 +49,12 @@ export function formatMonth(key: string): string {
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
+export function formatDateTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(date);
+}
+
 export function formatInt(value: number): string {
   return new Intl.NumberFormat("pt-BR").format(Math.round(value));
 }

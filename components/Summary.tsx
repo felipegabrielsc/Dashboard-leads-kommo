@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { GROUP_META, WEEKDAY_ORDER, WEEKDAYS, shortLabel } from "@/lib/categories";
 import { formatDate, formatInt, formatPct } from "@/lib/format";
 import type { MonthRow, Totals } from "@/lib/metrics";
@@ -14,6 +17,16 @@ type Props = {
   onDivergent: () => void;
   onMotive: (id: string) => void;
   onMonth: (month: string) => void;
+  comparison: {
+    from: string;
+    to: string;
+    taxa: number | null;
+    comprou: number | null;
+    semRetorno: number | null;
+  } | null;
+  missingDays: string[];
+  canFillGaps: boolean;
+  onMissingDay: (date: string) => void;
 };
 
 export function Summary({
@@ -26,6 +39,10 @@ export function Summary({
   onDivergent,
   onMotive,
   onMonth,
+  comparison,
+  missingDays,
+  canFillGaps,
+  onMissingDay,
 }: Props) {
   const reasons = topMotives(totals, categories, "perdidos");
   const biggest = reasons[0];
@@ -90,6 +107,23 @@ export function Summary({
           tone="brass"
         />
       </section>
+
+      {comparison && (
+        <Comparison
+          from={comparison.from}
+          to={comparison.to}
+          currentTaxa={totals.taxaInteresse}
+          currentComprou={totals.comprou}
+          currentSemRetorno={totals.semRetorno}
+          taxa={comparison.taxa}
+          comprou={comparison.comprou}
+          semRetorno={comparison.semRetorno}
+        />
+      )}
+
+      {missingDays.length > 0 && (
+        <MissingDays dates={missingDays} canFill={canFillGaps} onPick={onMissingDay} />
+      )}
 
       <section className="grid gap-3 lg:grid-cols-3">
         <button type="button" onClick={onPending} className="panel p-4 text-left transition hover:border-brass/50">
@@ -217,6 +251,136 @@ export function Summary({
         </div>
       </article>
     </div>
+  );
+}
+
+function Comparison({
+  from,
+  to,
+  currentTaxa,
+  currentComprou,
+  currentSemRetorno,
+  taxa,
+  comprou,
+  semRetorno,
+}: {
+  from: string;
+  to: string;
+  currentTaxa: number;
+  currentComprou: number;
+  currentSemRetorno: number;
+  taxa: number | null;
+  comprou: number | null;
+  semRetorno: number | null;
+}) {
+  const label = `${formatDate(from)} a ${formatDate(to)}`;
+  return (
+    <section className="panel p-5">
+      <h2 className="font-serif text-2xl">Contra o período anterior</h2>
+      <p className="mt-1 text-sm text-mute">
+        Mesma quantidade de dias, imediatamente antes: {label}. A taxa muda em pontos percentuais.
+      </p>
+      {taxa == null || comprou == null || semRetorno == null ? (
+        <p className="mt-4 text-sm text-mute">Esse intervalo anterior ainda não tem lançamento.</p>
+      ) : (
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <CompareItem
+            label="Taxa de interesse"
+            current={formatPct(currentTaxa)}
+            delta={pointsLabel(currentTaxa - taxa)}
+            better={(currentTaxa - taxa) >= 0}
+          />
+          <CompareItem
+            label="Comprou"
+            current={formatInt(currentComprou)}
+            delta={countLabel(currentComprou - comprou)}
+            better={currentComprou - comprou >= 0}
+          />
+          <CompareItem
+            label="Sem retorno"
+            current={formatInt(currentSemRetorno)}
+            delta={countLabel(currentSemRetorno - semRetorno)}
+            better={currentSemRetorno - semRetorno <= 0}
+            note="Menos é melhor"
+          />
+        </div>
+      )}
+    </section>
+  );
+}
+
+function CompareItem({
+  label,
+  current,
+  delta,
+  better,
+  note,
+}: {
+  label: string;
+  current: string;
+  delta: string;
+  better: boolean;
+  note?: string;
+}) {
+  return (
+    <article className="rounded-2xl bg-paper px-4 py-3">
+      <p className="text-sm text-mute">{label}</p>
+      <p className="mt-1 font-serif text-3xl">{current}</p>
+      <p className={`mt-1 text-sm font-medium ${better ? "text-pine" : "text-wine"}`}>{delta}</p>
+      {note && <p className="text-xs text-mute">{note}</p>}
+    </article>
+  );
+}
+
+function pointsLabel(delta: number): string {
+  const points = delta * 100;
+  const text = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(Math.abs(points));
+  if (Math.abs(points) < 0.05) return "Igual ao período anterior";
+  return `${points > 0 ? "+" : "−"}${text} p.p. em relação ao período anterior`;
+}
+
+function countLabel(delta: number): string {
+  if (delta === 0) return "Igual ao período anterior";
+  return `${delta > 0 ? "+" : "−"}${formatInt(Math.abs(delta))} em relação ao período anterior`;
+}
+
+function MissingDays({
+  dates,
+  canFill,
+  onPick,
+}: {
+  dates: string[];
+  canFill: boolean;
+  onPick: (date: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const shown = open ? dates : dates.slice(0, 12);
+  return (
+    <section className="panel p-5">
+      <h2 className="font-serif text-2xl">Dias úteis sem lançamento</h2>
+      <p className="mt-1 text-sm text-mute">
+        {formatInt(dates.length)} {dates.length === 1 ? "dia de semana" : "dias de semana"} neste período ainda não têm linha na grade. Sábado e domingo ficam de fora.
+        {canFill ? " Clique numa data para lançar esse dia." : ""}
+      </p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {shown.map((date) =>
+          canFill ? (
+            <button key={date} type="button" className="chip" onClick={() => onPick(date)}>
+              {formatDate(date)}
+            </button>
+          ) : (
+            <span key={date} className="chip">
+              {formatDate(date)}
+            </span>
+          ),
+        )}
+      </div>
+      {dates.length > 12 && (
+        <button type="button" className="mt-3 text-sm text-mute underline-offset-2 hover:underline" onClick={() => setOpen((value) => !value)}>
+          {open ? "Mostrar menos" : `Ver os ${formatInt(dates.length - 12)} restantes`}
+        </button>
+      )}
+    </section>
   );
 }
 

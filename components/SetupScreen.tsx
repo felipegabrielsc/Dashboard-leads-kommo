@@ -13,6 +13,7 @@ export function SetupScreen() {
         </li>
         <li>Em Authentication → URL Configuration, coloque o endereço do site publicado.</li>
         <li>Se o SQL antigo já rodou, execute também supabase/leitura-publica.sql para liberar a consulta sem login.</li>
+        <li>No mesmo caso, execute supabase/historico-e-telefones.sql para gravar o histórico e esconder o telefone de quem não entrou.</li>
       </ol>
     </main>
   );

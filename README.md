@@ -6,9 +6,11 @@ O histórico da planilha entra no banco na primeira execução do SQL (23/06/202
 
 ## Quem vê e quem edita
 
-Qualquer visitante vê o painel, os filtros e os lançamentos. Só uma conta logada pode adicionar, editar ou apagar.
+Qualquer visitante vê o painel, os filtros e os lançamentos. Só uma conta logada pode adicionar, editar ou apagar. O telefone da lista em análise também fica só para quem entrou.
 
-Se o `schema.sql` antigo já foi executado, rode também `supabase/leitura-publica.sql` no SQL Editor.
+O painel compara o período escolhido com o intervalo anterior da mesma duração e aponta dias úteis sem lançamento. A aba Histórico mostra quem alterou cada célula, dia ou motivo.
+
+Se o `schema.sql` antigo já foi executado, rode `supabase/leitura-publica.sql` e depois `supabase/historico-e-telefones.sql` no SQL Editor.
 
 ## Rodar localmente
 

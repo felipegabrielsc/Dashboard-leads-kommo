@@ -14,19 +14,24 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-export function exportJson(state: LeadState) {
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+export function exportJson(state: LeadState, includePhones = true) {
+  const allowPhones = includePhones && state.analysis.some((lead) => lead.phone);
+  const payload = allowPhones
+    ? state
+    : { ...state, analysis: state.analysis.map((lead) => ({ ...lead, phone: "" })) };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   downloadBlob(blob, `leads-kommo-${stamp()}.json`);
 }
 
-export function exportWorkbook(state: LeadState) {
+export function exportWorkbook(state: LeadState, includePhones = true) {
+  const allowPhones = includePhones && state.analysis.some((lead) => lead.phone);
   const headers = [
     "Data",
     "Conferência",
     "Pendentes",
     "Quantidade informada",
     ...state.categories.map((category) => category.label),
-    "Telefones",
+    ...(allowPhones ? ["Telefones"] : []),
     "Descrições",
   ];
   const body = state.days.map((day) => {
@@ -38,13 +43,15 @@ export function exportWorkbook(state: LeadState) {
       day.pendingCount,
       day.declaredQuantity ?? sum,
       ...state.categories.map((category) => categoryValue(day.counts, category.id)),
-      leads.map((lead) => lead.phone).join(", "),
+      ...(allowPhones ? [leads.map((lead) => lead.phone).join(", ")] : []),
       leads.map((lead) => lead.description).filter(Boolean).join(" | "),
     ];
   });
   const analysis = [
-    ["Interessados em analise", "Data", "Descrição"],
-    ...state.analysis.map((lead) => [lead.phone, lead.date, lead.description]),
+    allowPhones ? ["Telefone", "Data", "Descrição"] : ["Data", "Descrição"],
+    ...state.analysis.map((lead) =>
+      allowPhones ? [lead.phone, lead.date, lead.description] : [lead.date, lead.description],
+    ),
   ];
   const motives = [
     ["Id", "Motivo", "Grupo"],

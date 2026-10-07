@@ -18,6 +18,7 @@ export function DaysTable({
   onEdit,
   onDelete,
   onReconcile,
+  onHistory,
   readOnly = false,
 }: {
   days: DayRecord[];
@@ -28,6 +29,7 @@ export function DaysTable({
   onEdit: (day: DayRecord) => void;
   onDelete: (date: string) => void;
   onReconcile: (date: string) => void;
+  onHistory: (date: string) => void;
   readOnly?: boolean;
 }) {
   const [sort, setSort] = useState<SortMode>("desc");
@@ -108,10 +110,20 @@ export function DaysTable({
                       <p className="font-medium">{formatDate(day.date)}</p>
                       <p className="text-xs text-mute">{WEEKDAYS[weekdayIndex(day.date)].label}</p>
                       {leads.length > 0 && (
-                        <p className="mt-1 max-w-36 text-xs text-brass" title={leads.map((lead) => formatPhone(lead.phone)).join(", ")}>
+                        <p
+                          className="mt-1 max-w-36 text-xs text-brass"
+                          title={
+                            !readOnly && leads.some((lead) => lead.phone)
+                              ? leads.map((lead) => formatPhone(lead.phone)).filter(Boolean).join(", ")
+                              : undefined
+                          }
+                        >
                           {leads.length} em análise
                         </p>
                       )}
+                      <button type="button" className="mt-1 text-xs text-mute underline-offset-2 hover:underline" onClick={() => onHistory(day.date)}>
+                        Histórico
+                      </button>
                     </td>
                     <td className={`sticky-col left-40 px-3 py-2 ${day.review === "pendente" ? "bg-[#fbf6ea]" : "bg-card"}`}>
                       {readOnly ? (

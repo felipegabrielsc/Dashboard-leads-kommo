@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { normalizeState } from "./normalize";
-import type { AnalysisLead, Category, DayRecord, LeadState } from "./types";
+import type { AnalysisLead, Category, ChangeEntry, DayRecord, LeadState } from "./types";
 
 type CategoryRow = {
   id: string;
@@ -25,9 +25,19 @@ type CountRow = {
 
 type AnalysisRow = {
   id: string;
-  phone: string;
+  phone?: string | null;
   day: string | null;
   description: string;
+};
+
+type ChangeRow = {
+  id: string;
+  created_at: string;
+  actor: string;
+  kind: string;
+  day: string | null;
+  category_id: string | null;
+  summary: string;
 };
 
 function isoDay(value: string | null): string {
@@ -44,11 +54,15 @@ function quotedList(values: string[]): string {
 }
 
 export async function fetchState(client: SupabaseClient): Promise<LeadState> {
+  const { data: sessionData } = await client.auth.getSession();
+  const signedIn = Boolean(sessionData.session);
   const [categories, days, counts, analysis] = await Promise.all([
     client.from("categories").select("id,label,group_id,builtin,position").order("position"),
     client.from("days").select("day,review,pending_count,declared_quantity").order("day"),
     client.from("day_counts").select("day,category_id,value"),
-    client.from("analysis_leads").select("id,phone,day,description"),
+    signedIn
+      ? client.from("analysis_leads").select("id,phone,day,description")
+      : client.from("analysis_leads").select("id,day,description"),
   ]);
   throwIf(categories.error);
   throwIf(days.error);
@@ -79,17 +93,16 @@ export async function fetchState(client: SupabaseClient): Promise<LeadState> {
       declaredQuantity: row.declared_quantity,
       counts: byDay.get(isoDay(row.day)) || {},
     })),
-    analysis: ((analysis.data || []) as AnalysisRow[]).map((row) => ({
+    analysis: ((analysis.data || []) as unknown as AnalysisRow[]).map((row) => ({
       id: row.id,
-      phone: row.phone,
+      phone: row.phone || "",
       date: isoDay(row.day),
       description: row.description,
     })),
   });
   if (!state) throw new Error("O banco devolveu um formato que a dashboard não reconhece.");
   const missing = state.categories.filter((category) => category.builtin && !storedIds.has(category.id));
-  const { data: sessionData } = await client.auth.getSession();
-  if (missing.length && sessionData.session) {
+  if (missing.length && signedIn) {
     throwIf(
       (
         await client.from("categories").upsert(
@@ -256,4 +269,46 @@ export async function saveAnalysis(client: SupabaseClient, lead: AnalysisLead) {
 
 export async function deleteAnalysis(client: SupabaseClient, id: string) {
   throwIf((await client.from("analysis_leads").delete().eq("id", id)).error);
+}
+
+function mapChange(row: ChangeRow): ChangeEntry {
+  return {
+    id: row.id,
+    createdAt: row.created_at,
+    actor: row.actor,
+    kind: row.kind,
+    day: isoDay(row.day),
+    categoryId: row.category_id || "",
+    summary: row.summary,
+  };
+}
+
+export async function fetchChanges(client: SupabaseClient): Promise<ChangeEntry[]> {
+  const { data, error } = await client
+    .from("change_log")
+    .select("id,created_at,actor,kind,day,category_id,summary")
+    .order("created_at", { ascending: false })
+    .limit(200);
+  throwIf(error);
+  return ((data || []) as ChangeRow[]).map(mapChange);
+}
+
+export async function recordChange(
+  client: SupabaseClient,
+  entry: { kind: string; day?: string; categoryId?: string; summary: string },
+): Promise<ChangeEntry> {
+  const { data: userData } = await client.auth.getUser();
+  const { data, error } = await client
+    .from("change_log")
+    .insert({
+      actor: userData.user?.email || "conta",
+      kind: entry.kind,
+      day: entry.day || null,
+      category_id: entry.categoryId || null,
+      summary: entry.summary,
+    })
+    .select("id,created_at,actor,kind,day,category_id,summary")
+    .single();
+  throwIf(error);
+  return mapChange(data as ChangeRow);
 }

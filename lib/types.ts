@@ -24,6 +24,16 @@ export type AnalysisLead = {
   description: string;
 };
 
+export type ChangeEntry = {
+  id: string;
+  createdAt: string;
+  actor: string;
+  kind: string;
+  day: string;
+  categoryId: string;
+  summary: string;
+};
+
 export type LeadState = {
   version: 1;
   categories: Category[];

@@ -113,13 +113,21 @@ export function AnalysisPanel({
             <tbody>
               {visible.map((lead) => (
                 <tr key={lead.id} className="border-t border-line">
-                  <td className="px-5 py-3 font-medium">{formatPhone(lead.phone)}</td>
+                  <td className="px-5 py-3 font-medium">
+                    {!readOnly && lead.phone ? (
+                      formatPhone(lead.phone)
+                    ) : (
+                      <span className="font-normal text-mute">Visível depois do login</span>
+                    )}
+                  </td>
                   <td className="px-3 py-3">{lead.date ? formatDate(lead.date) : "—"}</td>
                   <td className="px-3 py-3 text-mute">{lead.description || "Sem descrição"}</td>
                   <td className="whitespace-nowrap px-5 py-3">
-                    <a className="underline-offset-2 hover:underline" href={whatsappUrl(lead.phone)} target="_blank" rel="noreferrer">
-                      WhatsApp
-                    </a>
+                    {!readOnly && lead.phone && (
+                      <a className="underline-offset-2 hover:underline" href={whatsappUrl(lead.phone)} target="_blank" rel="noreferrer">
+                        WhatsApp
+                      </a>
+                    )}
                     {!readOnly && (
                       <>
                         <button type="button" className="ml-3 underline-offset-2 hover:underline" onClick={() => setDraft(lead)}>

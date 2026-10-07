@@ -6,9 +6,11 @@ import { AnalysisPanel } from "@/components/AnalysisPanel";
 import { CategoryManager } from "@/components/CategoryManager";
 import { DayEditor } from "@/components/DayEditor";
 import { DaysTable } from "@/components/DaysTable";
+import { FilterBar } from "@/components/FilterBar";
+import { HistoryPanel } from "@/components/HistoryPanel";
 import { Summary } from "@/components/Summary";
 import { TrendCharts } from "@/components/TrendCharts";
-import { GROUP_META, WEEKDAY_ORDER, WEEKDAYS, shortLabel, sumCategories } from "@/lib/categories";
+import { sumCategories } from "@/lib/categories";
 import { exportCsv, exportJson, exportWorkbook } from "@/lib/exportData";
 import {
   activeFilterCount,
@@ -16,18 +18,17 @@ import {
   filterAnalysis,
   filterDays,
   isSlice,
-  motiveFilterCategories,
-  toggleList,
   visibleCategories,
 } from "@/lib/filters";
-import { addDays, formatDate, formatInt, formatMonth, monthBounds, monthKey, todayISO } from "@/lib/format";
+import { addDays, formatDate, formatInt, monthBounds, monthKey, todayISO } from "@/lib/format";
 import { buildBuckets, buildMonthRows, computeTotals, topMotives, weekdayLoads } from "@/lib/metrics";
+import { activeWindow, missingBusinessDays, previousWindow, windowHasDate } from "@/lib/period";
 import { mergeStates, parseWorkbook } from "@/lib/parseSheet";
 import { normalizeState, useLeads } from "@/lib/store";
 import { SetupScreen } from "@/components/SetupScreen";
-import type { DayRecord, Filters, GroupId, LeadState } from "@/lib/types";
+import type { DayRecord, Filters, LeadState } from "@/lib/types";
 
-type Tab = "painel" | "lancamentos" | "analise";
+type Tab = "painel" | "lancamentos" | "analise" | "historico";
 
 export function DashboardApp() {
   const leads = useLeads();
@@ -38,6 +39,7 @@ export function DashboardApp() {
   const [pendingImport, setPendingImport] = useState<LeadState | null>(null);
   const [notice, setNotice] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [historyDay, setHistoryDay] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const { state } = leads;
@@ -68,6 +70,24 @@ export function DashboardApp() {
     for (const lead of state.analysis) if (lead.date) keys.add(monthKey(lead.date));
     return [...keys].sort();
   }, [state.analysis, state.days]);
+  const today = todayISO();
+  const knownDates = useMemo(
+    () => [...state.days.map((day) => day.date), ...state.analysis.map((lead) => lead.date)],
+    [state.analysis, state.days],
+  );
+  const currentWindow = useMemo(() => activeWindow(filters, knownDates, today), [filters, knownDates, today]);
+  const priorWindow = useMemo(() => (currentWindow ? previousWindow(currentWindow) : null), [currentWindow]);
+  const priorTotals = useMemo(() => {
+    if (!priorWindow || !windowHasDate(knownDates, priorWindow)) return null;
+    const scoped = { ...filters, from: priorWindow.from, to: priorWindow.to, months: [], query: "" };
+    const priorDays = filterDays(state.days, state.analysis, scoped);
+    const priorAnalysis = filterAnalysis(state.analysis, state.days, scoped);
+    return computeTotals(priorDays, sliced ? 0 : priorAnalysis.length, columns);
+  }, [columns, filters, knownDates, priorWindow, sliced, state.analysis, state.days]);
+  const missingDays = useMemo(
+    () => (currentWindow ? missingBusinessDays(state.days.map((day) => day.date), currentWindow, today) : []),
+    [currentWindow, state.days, today],
+  );
 
   if (!leads.configured) return <SetupScreen />;
 
@@ -165,7 +185,8 @@ export function DashboardApp() {
     tudo: !filters.from && !filters.to && filters.months.length === 0,
     "7": filters.from === addDays(todayISO(), -6) && filters.to === todayISO(),
     "30": filters.from === addDays(todayISO(), -29) && filters.to === todayISO(),
-    mes: filters.from === monthBounds(todayISO().slice(0, 7)).from && filters.to === monthBounds(todayISO().slice(0, 7)).to,
+    mes: filters.from === monthBounds(today.slice(0, 7)).from && filters.to === monthBounds(today.slice(0, 7)).to,
+    anterior: filters.from === previousMonthBounds(today).from && filters.to === previousMonthBounds(today).to,
   };
 
   return (
@@ -199,8 +220,8 @@ export function DashboardApp() {
             <details className="relative">
               <summary className="btn cursor-pointer list-none">Exportar</summary>
               <div className="absolute right-0 z-40 mt-2 w-56 rounded-2xl border border-line bg-card p-1 shadow-card">
-                <MenuButton onClick={() => exportWorkbook(state)}>Planilha Excel</MenuButton>
-                <MenuButton onClick={() => exportJson(state)}>Backup JSON</MenuButton>
+                <MenuButton onClick={() => exportWorkbook(state, leads.canEdit)}>Planilha Excel</MenuButton>
+                <MenuButton onClick={() => exportJson(state, leads.canEdit)}>Backup JSON</MenuButton>
                 <MenuButton onClick={() => exportCsv(state, new Set(baseDays.map((day) => day.date)))}>
                   CSV deste recorte
                 </MenuButton>
@@ -249,7 +270,29 @@ export function DashboardApp() {
             />
           </div>
         </div>
-        <div className="mx-auto flex max-w-[1440px] items-center gap-2 px-4 pb-3 lg:hidden">
+        <nav className="mx-auto flex max-w-[1440px] gap-2 px-4 pb-3" aria-label="Seções">
+          {(
+            [
+              ["painel", "Painel"],
+              ["lancamentos", "Lançamentos"],
+              ["analise", `Em análise (${analysisRows.length})`],
+              ["historico", "Histórico"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              className={`chip ${tab === id ? "chip-on" : ""}`}
+              onClick={() => setTab(id)}
+              aria-pressed={tab === id}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
+      </header>
+      <div className="border-b border-line/80 bg-paper/80">
+        <div className="mx-auto flex max-w-[1440px] items-center gap-2 px-4 py-3 lg:hidden">
           <button type="button" className="btn" onClick={() => setFiltersOpen((open) => !open)} aria-expanded={filtersOpen}>
             {filtersOpen ? "Ocultar filtros" : "Filtros"}
             {activeFilterCount(filters) > 0 ? ` (${activeFilterCount(filters)})` : ""}
@@ -265,31 +308,13 @@ export function DashboardApp() {
             filters={filters}
             months={monthOptions}
             categories={state.categories}
+            canSeePhones={leads.canEdit}
             onChange={setFilters}
             onPreset={setPreset}
             presetActive={presetActive}
           />
         </div>
-        <nav className="mx-auto flex max-w-[1440px] gap-2 px-4 pb-3" aria-label="Seções">
-          {(
-            [
-              ["painel", "Painel"],
-              ["lancamentos", "Lançamentos"],
-              ["analise", `Em análise (${analysisRows.length})`],
-            ] as const
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              className={`chip ${tab === id ? "chip-on" : ""}`}
-              onClick={() => setTab(id)}
-              aria-pressed={tab === id}
-            >
-              {label}
-            </button>
-          ))}
-        </nav>
-      </header>
+      </div>
 
       {(notice || leads.saveError) && (
         <div className="mx-auto mt-4 flex max-w-[1440px] items-center justify-between gap-3 px-4">
@@ -326,6 +351,25 @@ export function DashboardApp() {
                 const bounds = monthBounds(month);
                 setFilters((current) => ({ ...current, from: bounds.from, to: bounds.to, months: [] }));
               }}
+              comparison={
+                currentWindow &&
+                priorWindow &&
+                (priorTotals || filters.from || filters.to || filters.months.length)
+                  ? {
+                      from: priorWindow.from,
+                      to: priorWindow.to,
+                      taxa: priorTotals?.taxaInteresse ?? null,
+                      comprou: priorTotals?.comprou ?? null,
+                      semRetorno: priorTotals?.semRetorno ?? null,
+                    }
+                  : null
+              }
+              missingDays={missingDays}
+              canFillGaps={leads.canEdit}
+              onMissingDay={(date) => {
+                if (!leads.canEdit) return;
+                setEditor({ date, review: "ok", pendingCount: 0, declaredQuantity: null, counts: {} });
+              }}
             />
             <TrendCharts buckets={buckets} reasons={reasons} categories={columns} />
           </>
@@ -342,6 +386,10 @@ export function DashboardApp() {
               if (window.confirm(`Excluir o lançamento de ${formatDate(date)}?`)) leads.deleteDay(date);
             }}
             onReconcile={leads.reconcile}
+            onHistory={(date) => {
+              setHistoryDay(date);
+              setTab("historico");
+            }}
             readOnly={!leads.canEdit}
           />
         )}
@@ -353,11 +401,15 @@ export function DashboardApp() {
             readOnly={!leads.canEdit}
           />
         )}
+        {tab === "historico" && (
+          <HistoryPanel changes={leads.changes} error={leads.historyError} day={historyDay} onDay={setHistoryDay} />
+        )}
       </main>
 
       <footer className="mx-auto max-w-[1440px] px-4 py-8 text-sm text-mute">
-        Qualquer pessoa vê os números. Para lançar, editar ou apagar, entre na conta.
-        A conferência ✅ significa que o dia está completo; ❌ significa que ainda há lead em análise.
+        Qualquer pessoa vê os números. Para lançar, editar ou apagar, entre na conta. O telefone da lista em análise
+        também fica só para quem entrou. A conferência ✅ significa que o dia está completo; ❌ significa que ainda há
+        lead em análise.
       </footer>
 
       {editor !== undefined && (
@@ -443,156 +495,9 @@ function ImportDialog({
   );
 }
 
-function FilterBar({
-  filters,
-  months,
-  categories,
-  onChange,
-  onPreset,
-  presetActive,
-}: {
-  filters: Filters;
-  months: string[];
-  categories: LeadState["categories"];
-  onChange: (filters: Filters) => void;
-  onPreset: (preset: "tudo" | "7" | "30" | "mes" | "anterior") => void;
-  presetActive: { tudo: boolean; "7": boolean; "30": boolean; mes: boolean };
-}) {
-  const count = activeFilterCount(filters);
-  return (
-    <div className="mx-auto max-w-[1440px] space-y-3 px-4 pb-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <Preset on={presetActive.tudo} onClick={() => onPreset("tudo")}>Tudo</Preset>
-        <Preset on={presetActive["7"]} onClick={() => onPreset("7")}>7 dias</Preset>
-        <Preset on={presetActive["30"]} onClick={() => onPreset("30")}>30 dias</Preset>
-        <Preset on={presetActive.mes} onClick={() => onPreset("mes")}>Este mês</Preset>
-        <Preset on={false} onClick={() => onPreset("anterior")}>Mês passado</Preset>
-        <label className="text-sm text-mute">
-          De
-          <input
-            type="date"
-            className="field ml-1 w-auto"
-            value={filters.from}
-            onChange={(event) => onChange({ ...filters, from: event.target.value, months: [] })}
-          />
-        </label>
-        <label className="text-sm text-mute">
-          Até
-          <input
-            type="date"
-            className="field ml-1 w-auto"
-            value={filters.to}
-            onChange={(event) => onChange({ ...filters, to: event.target.value, months: [] })}
-          />
-        </label>
-        <label className="min-w-48 flex-1 text-sm text-mute">
-          Busca
-          <input
-            className="field ml-1"
-            placeholder="Telefone, descrição, data"
-            value={filters.query}
-            onChange={(event) => onChange({ ...filters, query: event.target.value })}
-          />
-        </label>
-        {count > 0 && (
-          <button type="button" className="text-sm text-mute underline-offset-2 hover:underline" onClick={() => onChange(defaultFilters())}>
-            Limpar filtros ({count})
-          </button>
-        )}
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        {months.map((month) => (
-          <button
-            key={month}
-            type="button"
-            className={`chip ${filters.months.includes(month) ? "chip-on" : ""}`}
-            aria-pressed={filters.months.includes(month)}
-            onClick={() => onChange({ ...filters, months: toggleList(filters.months, month), from: "", to: "" })}
-          >
-            {formatMonth(month)}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        {WEEKDAY_ORDER.map((id) => (
-          <button
-            key={id}
-            type="button"
-            className={`chip ${filters.weekdays.includes(id) ? "chip-on" : ""}`}
-            aria-pressed={filters.weekdays.includes(id)}
-            onClick={() => onChange({ ...filters, weekdays: toggleList(filters.weekdays, id) })}
-          >
-            {WEEKDAYS[id].short}
-          </button>
-        ))}
-        <span className="mx-1 hidden h-6 w-px self-center bg-line sm:block" />
-        {(
-          [
-            ["todos", "Todos os dias"],
-            ["ok", "Conferidos"],
-            ["pendente", "Pendentes"],
-          ] as const
-        ).map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            className={`chip ${filters.review === value ? "chip-on" : ""}`}
-            aria-pressed={filters.review === value}
-            onClick={() => onChange({ ...filters, review: value })}
-          >
-            {label}
-          </button>
-        ))}
-        <button
-          type="button"
-          className={`chip ${filters.divergence === "somente" ? "chip-on" : ""}`}
-          aria-pressed={filters.divergence === "somente"}
-          onClick={() =>
-            onChange({
-              ...filters,
-              divergence: filters.divergence === "somente" ? "todos" : "somente",
-            })
-          }
-        >
-          Quantidade divergente
-        </button>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        {(Object.keys(GROUP_META) as GroupId[]).map((group) => (
-          <button
-            key={group}
-            type="button"
-            className={`chip ${filters.groups.includes(group) ? "chip-on" : ""}`}
-            aria-pressed={filters.groups.includes(group)}
-            onClick={() => onChange({ ...filters, groups: toggleList(filters.groups, group) })}
-          >
-            {GROUP_META[group].label}
-          </button>
-        ))}
-        {motiveFilterCategories(categories).map((category) => (
-          <button
-            key={category.id}
-            type="button"
-            title={category.label}
-            className={`chip ${filters.motives.includes(category.id) ? "chip-on" : ""}`}
-            aria-pressed={filters.motives.includes(category.id)}
-            onClick={() => onChange({ ...filters, motives: toggleList(filters.motives, category.id) })}
-          >
-            {shortLabel(category)}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
+function previousMonthBounds(today: string) {
+  const [year, month] = today.split("-").map(Number);
+  const key = `${month === 1 ? year - 1 : year}-${String(month === 1 ? 12 : month - 1).padStart(2, "0")}`;
+  return monthBounds(key);
 }
 
-function Preset({ children, on, onClick }: { children: React.ReactNode; on: boolean; onClick: () => void }) {
-  return (
-    <button type="button" className={`chip ${on ? "chip-on" : ""}`} aria-pressed={on} onClick={onClick}>
-      {children}
-    </button>
-  );
-}

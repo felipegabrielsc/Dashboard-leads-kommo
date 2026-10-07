@@ -4,6 +4,7 @@ import { normalizeState } from "./store";
 import { computeTotals } from "./metrics";
 import { GROUP_META, normalizeLabel, shortLabel } from "./categories";
 import { defaultFilters, filterDays, motiveFilterCategories } from "./filters";
+import { activeWindow, missingBusinessDays, previousWindow } from "./period";
 
 const state = normalizeState(seed);
 assert.ok(state, "seed normaliza");
@@ -51,5 +52,23 @@ for (const label of motiveLabels) {
   assert.equal(groupLabels.has(label), false, `filtro duplicado: ${label}`);
 }
 assert.equal(motiveLabels.includes("sem retorno"), false);
+
+const septemberWindow = activeWindow({ ...defaultFilters(), months: ["2026-09"] }, state.days.map((day) => day.date), "2026-10-07");
+assert.deepEqual(septemberWindow, { from: "2026-09-01", to: "2026-09-30" });
+assert.deepEqual(previousWindow(septemberWindow!), { from: "2026-08-02", to: "2026-08-31" });
+
+const gap = missingBusinessDays(
+  state.days.map((day) => day.date),
+  { from: "2026-07-29", to: "2026-08-19" },
+  "2026-10-07",
+);
+assert.equal(gap.includes("2026-07-30"), true);
+assert.equal(gap.includes("2026-08-01"), false);
+assert.equal(gap.includes("2026-08-19"), false);
+assert.equal(gap.length, 14);
+assert.equal(
+  missingBusinessDays(state.days.map((day) => day.date), { from: "2026-09-01", to: "2026-09-30" }, "2026-10-07").length,
+  0,
+);
 
 console.log("metrics ok");
