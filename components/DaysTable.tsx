@@ -18,6 +18,7 @@ export function DaysTable({
   onEdit,
   onDelete,
   onReconcile,
+  readOnly = false,
 }: {
   days: DayRecord[];
   categories: Category[];
@@ -27,6 +28,7 @@ export function DaysTable({
   onEdit: (day: DayRecord) => void;
   onDelete: (date: string) => void;
   onReconcile: (date: string) => void;
+  readOnly?: boolean;
 }) {
   const [sort, setSort] = useState<SortMode>("desc");
   const rows = useMemo(() => {
@@ -53,7 +55,9 @@ export function DaysTable({
         <div>
           <h2 className="font-serif text-2xl">Lançamentos</h2>
           <p className="mt-1 text-sm text-mute">
-            Cada linha é um dia. Edite o número direto na célula. Zero aparece em branco, como na planilha.
+            {readOnly
+              ? "Cada linha é um dia. Zero aparece em branco, como na planilha."
+              : "Cada linha é um dia. Edite o número direto na célula. Zero aparece em branco, como na planilha."}
           </p>
         </div>
         <label className="text-sm text-mute">
@@ -67,7 +71,11 @@ export function DaysTable({
       </div>
 
       {!rows.length ? (
-        <p className="px-5 pb-8 text-sm text-mute">Nenhum dia neste recorte. Limpe um filtro ou adicione um lançamento.</p>
+        <p className="px-5 pb-8 text-sm text-mute">
+          {readOnly
+            ? "Nenhum dia neste recorte. Limpe um filtro para ver outros dias."
+            : "Nenhum dia neste recorte. Limpe um filtro ou adicione um lançamento."}
+        </p>
       ) : (
         <div className="sheet-scroll border-t border-line">
           <table className="w-max min-w-full border-separate border-spacing-0 text-sm">
@@ -86,7 +94,7 @@ export function DaysTable({
                     <span className="block w-24 leading-tight">{shortLabel(category)}</span>
                   </th>
                 ))}
-                <th className="bg-card px-3 py-3 font-medium">Ações</th>
+                {!readOnly && <th className="bg-card px-3 py-3 font-medium">Ações</th>}
               </tr>
             </thead>
             <tbody>
@@ -106,15 +114,25 @@ export function DaysTable({
                       )}
                     </td>
                     <td className={`sticky-col left-40 px-3 py-2 ${day.review === "pendente" ? "bg-[#fbf6ea]" : "bg-card"}`}>
-                      <button
-                        type="button"
-                        onClick={() => onToggleReview(day)}
-                        className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                          day.review === "pendente" ? "bg-brass text-white" : "bg-pineSoft text-pine"
-                        }`}
-                      >
-                        {day.review === "pendente" ? `${day.pendingCount} pendente` : "Conferido"}
-                      </button>
+                      {readOnly ? (
+                        <span
+                          className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${
+                            day.review === "pendente" ? "bg-brass text-white" : "bg-pineSoft text-pine"
+                          }`}
+                        >
+                          {day.review === "pendente" ? `${day.pendingCount} pendente` : "Conferido"}
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => onToggleReview(day)}
+                          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                            day.review === "pendente" ? "bg-brass text-white" : "bg-pineSoft text-pine"
+                          }`}
+                        >
+                          {day.review === "pendente" ? `${day.pendingCount} pendente` : "Conferido"}
+                        </button>
+                      )}
                       {divergent && (
                         <p className="mt-1 text-xs text-wine">Anotado: {day.declaredQuantity}</p>
                       )}
@@ -125,27 +143,30 @@ export function DaysTable({
                         <CountCell
                           value={categoryValue(day.counts, category.id)}
                           label={`${shortLabel(category)} em ${formatDate(day.date)}`}
+                          readOnly={readOnly}
                           onCommit={(value) => onCell(day.date, category.id, value)}
                         />
                       </td>
                     ))}
-                    <td className="whitespace-nowrap px-3 py-2">
-                      <button type="button" className="text-sm underline-offset-2 hover:underline" onClick={() => onEdit(day)}>
-                        Editar
-                      </button>
-                      {divergent && (
-                        <button type="button" className="ml-3 text-sm text-wine underline-offset-2 hover:underline" onClick={() => onReconcile(day.date)}>
-                          Usar a soma
+                    {!readOnly && (
+                      <td className="whitespace-nowrap px-3 py-2">
+                        <button type="button" className="text-sm underline-offset-2 hover:underline" onClick={() => onEdit(day)}>
+                          Editar
                         </button>
-                      )}
-                      <button
-                        type="button"
-                        className="ml-3 text-sm text-mute underline-offset-2 hover:underline"
-                        onClick={() => onDelete(day.date)}
-                      >
-                        Excluir
-                      </button>
-                    </td>
+                        {divergent && (
+                          <button type="button" className="ml-3 text-sm text-wine underline-offset-2 hover:underline" onClick={() => onReconcile(day.date)}>
+                            Usar a soma
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="ml-3 text-sm text-mute underline-offset-2 hover:underline"
+                          onClick={() => onDelete(day.date)}
+                        >
+                          Excluir
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 );
               })}
@@ -160,7 +181,7 @@ export function DaysTable({
                     {value}
                   </td>
                 ))}
-                <td className="bg-[#f7f3ea]" />
+                {!readOnly && <td className="bg-[#f7f3ea]" />}
               </tr>
             </tfoot>
           </table>
@@ -174,10 +195,12 @@ function CountCell({
   value,
   label,
   onCommit,
+  readOnly = false,
 }: {
   value: number;
   label: string;
   onCommit: (value: number) => void;
+  readOnly?: boolean;
 }) {
   const [draft, setDraft] = useState(value ? String(value) : "");
   const [focused, setFocused] = useState(false);
@@ -185,6 +208,14 @@ function CountCell({
   useEffect(() => {
     if (!focused) setDraft(value ? String(value) : "");
   }, [focused, value]);
+
+  if (readOnly) {
+    return (
+      <span className="block w-16 px-2 py-1 text-center" aria-label={label}>
+        {value || "–"}
+      </span>
+    );
+  }
 
   return (
     <input

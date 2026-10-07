@@ -21,15 +21,9 @@ export async function middleware(request: NextRequest) {
   });
 
   const { data } = await supabase.auth.getUser();
-  const user = data.user;
   const isLogin = request.nextUrl.pathname.startsWith("/login");
 
-  if (!user && !isLogin) {
-    const redirect = request.nextUrl.clone();
-    redirect.pathname = "/login";
-    return NextResponse.redirect(redirect);
-  }
-  if (user && isLogin) {
+  if (data.user && isLogin) {
     const redirect = request.nextUrl.clone();
     redirect.pathname = "/";
     return NextResponse.redirect(redirect);

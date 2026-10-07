@@ -4,9 +4,11 @@ Dashboard para lançar, filtrar e acompanhar os leads da planilha `relatorio-lea
 
 O histórico da planilha entra no banco na primeira execução do SQL (23/06/2026 a 01/10/2026). Dali em diante cada dia novo é lançado na dashboard e salvo no Supabase.
 
-## Entrar
+## Quem vê e quem edita
 
-A tela só abre com login. Quem entra vê e edita os mesmos lançamentos da empresa.
+Qualquer visitante vê o painel, os filtros e os lançamentos. Só uma conta logada pode adicionar, editar ou apagar.
+
+Se o `schema.sql` antigo já foi executado, rode também `supabase/leitura-publica.sql` no SQL Editor.
 
 ## Rodar localmente
 
@@ -24,7 +26,7 @@ Preencha `.env.local` com a URL e a chave anon do projeto.
 1. Crie um projeto em [supabase.com](https://supabase.com).
 2. Abra o SQL Editor e execute `supabase/schema.sql`.
 3. Em Authentication → Users, crie o primeiro e-mail e senha. Desative "Confirm email" se quiser entrar sem esperar o e-mail.
-4. Depois da primeira conta, desative novas inscrições em Authentication → Sign In / Providers. Isso impede que outra pessoa crie conta e veja os telefones.
+4. Depois da primeira conta, desative novas inscrições em Authentication → Sign In / Providers. A consulta continua pública; a inscrição nova é que deixa de existir.
 5. Em Authentication → URL Configuration, coloque o endereço local (`http://localhost:3000`) e, depois, o endereço da Vercel.
 
 ## Publicar na Vercel

@@ -10,10 +10,12 @@ export function AnalysisPanel({
   leads,
   onSave,
   onDelete,
+  readOnly = false,
 }: {
   leads: AnalysisLead[];
   onSave: (lead: AnalysisLead) => void;
   onDelete: (id: string) => void;
+  readOnly?: boolean;
 }) {
   const [draft, setDraft] = useState(empty);
   const [onlyBlank, setOnlyBlank] = useState(false);
@@ -43,6 +45,7 @@ export function AnalysisPanel({
 
   return (
     <section className="space-y-3">
+      {!readOnly && (
       <form onSubmit={submit} className="panel grid gap-3 p-5 md:grid-cols-[1fr_160px_1.4fr_auto]">
         <label className="block text-sm">
           Telefone
@@ -87,6 +90,7 @@ export function AnalysisPanel({
           Estes são os leads do ❌: ainda não entraram na grade do dia. O total geral da planilha soma essa lista.
         </p>
       </form>
+      )}
 
       <article className="panel overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
@@ -116,12 +120,16 @@ export function AnalysisPanel({
                     <a className="underline-offset-2 hover:underline" href={whatsappUrl(lead.phone)} target="_blank" rel="noreferrer">
                       WhatsApp
                     </a>
-                    <button type="button" className="ml-3 underline-offset-2 hover:underline" onClick={() => setDraft(lead)}>
-                      Editar
-                    </button>
-                    <button type="button" className="ml-3 text-wine underline-offset-2 hover:underline" onClick={() => onDelete(lead.id)}>
-                      Excluir
-                    </button>
+                    {!readOnly && (
+                      <>
+                        <button type="button" className="ml-3 underline-offset-2 hover:underline" onClick={() => setDraft(lead)}>
+                          Editar
+                        </button>
+                        <button type="button" className="ml-3 text-wine underline-offset-2 hover:underline" onClick={() => onDelete(lead.id)}>
+                          Excluir
+                        </button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ))}

@@ -88,7 +88,8 @@ export async function fetchState(client: SupabaseClient): Promise<LeadState> {
   });
   if (!state) throw new Error("O banco devolveu um formato que a dashboard não reconhece.");
   const missing = state.categories.filter((category) => category.builtin && !storedIds.has(category.id));
-  if (missing.length) {
+  const { data: sessionData } = await client.auth.getSession();
+  if (missing.length && sessionData.session) {
     throwIf(
       (
         await client.from("categories").upsert(

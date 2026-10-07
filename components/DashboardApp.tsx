@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { AnalysisPanel } from "@/components/AnalysisPanel";
 import { CategoryManager } from "@/components/CategoryManager";
@@ -182,15 +183,19 @@ export function DashboardApp() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button type="button" className="btn btn-primary" onClick={() => setEditor(null)}>
-              Adicionar dia
-            </button>
-            <button type="button" className="btn" onClick={() => setMotivesOpen(true)}>
-              Novo motivo
-            </button>
-            <button type="button" className="btn" onClick={() => fileRef.current?.click()}>
-              Importar
-            </button>
+            {leads.canEdit && (
+              <>
+                <button type="button" className="btn btn-primary" onClick={() => setEditor(null)}>
+                  Adicionar dia
+                </button>
+                <button type="button" className="btn" onClick={() => setMotivesOpen(true)}>
+                  Novo motivo
+                </button>
+                <button type="button" className="btn" onClick={() => fileRef.current?.click()}>
+                  Importar
+                </button>
+              </>
+            )}
             <details className="relative">
               <summary className="btn cursor-pointer list-none">Exportar</summary>
               <div className="absolute right-0 z-40 mt-2 w-56 rounded-2xl border border-line bg-card p-1 shadow-card">
@@ -201,26 +206,36 @@ export function DashboardApp() {
                 </MenuButton>
               </div>
             </details>
-            <button
-              type="button"
-              className="btn"
-              onClick={() => {
-                if (
-                  window.confirm(
-                    "Isso substitui os lançamentos da conta pela planilha original. Um backup exportado não é apagado.",
-                  )
-                ) {
-                  leads.reset();
-                  setNotice("Planilha original restaurada na conta.");
-                }
-              }}
-            >
-              Restaurar
-            </button>
-            {leads.email && <span className="self-center text-sm text-mute">{leads.email}</span>}
-            <button type="button" className="btn" onClick={leads.signOut}>
-              Sair
-            </button>
+            {leads.canEdit && (
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      "Isso substitui os lançamentos da conta pela planilha original. Um backup exportado não é apagado.",
+                    )
+                  ) {
+                    leads.reset();
+                    setNotice("Planilha original restaurada na conta.");
+                  }
+                }}
+              >
+                Restaurar
+              </button>
+            )}
+            {leads.canEdit ? (
+              <>
+                {leads.email && <span className="self-center text-sm text-mute">{leads.email}</span>}
+                <button type="button" className="btn" onClick={leads.signOut}>
+                  Sair
+                </button>
+              </>
+            ) : (
+              <Link className="btn btn-primary" href="/login">
+                Entrar para editar
+              </Link>
+            )}
             <input
               ref={fileRef}
               type="file"
@@ -327,15 +342,21 @@ export function DashboardApp() {
               if (window.confirm(`Excluir o lançamento de ${formatDate(date)}?`)) leads.deleteDay(date);
             }}
             onReconcile={leads.reconcile}
+            readOnly={!leads.canEdit}
           />
         )}
         {tab === "analise" && (
-          <AnalysisPanel leads={analysisRows} onSave={leads.saveAnalysis} onDelete={leads.deleteAnalysis} />
+          <AnalysisPanel
+            leads={analysisRows}
+            onSave={leads.saveAnalysis}
+            onDelete={leads.deleteAnalysis}
+            readOnly={!leads.canEdit}
+          />
         )}
       </main>
 
       <footer className="mx-auto max-w-[1440px] px-4 py-8 text-sm text-mute">
-        Os lançamentos ficam salvos na conta do Supabase. Quem entra com login vê os mesmos dados.
+        Qualquer pessoa vê os números. Para lançar, editar ou apagar, entre na conta.
         A conferência ✅ significa que o dia está completo; ❌ significa que ainda há lead em análise.
       </footer>
 

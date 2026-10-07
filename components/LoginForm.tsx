@@ -69,7 +69,7 @@ export function LoginForm() {
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brass">Kommo</p>
       <h1 className="mt-2 font-serif text-4xl">Entrar nos leads</h1>
       <p className="mt-3 text-sm text-mute">
-        Quem entra vê e edita os mesmos lançamentos. Sem login, a dashboard não abre.
+        A dashboard continua aberta para consulta. A conta serve para lançar, editar e apagar.
       </p>
       <div className="mt-6 flex gap-2">
         {(
