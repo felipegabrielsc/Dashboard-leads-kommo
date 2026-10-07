@@ -1,5 +1,6 @@
 -- Cole este arquivo no SQL Editor do Supabase (uma vez).
 -- Cria as tabelas, deixa qualquer pessoa ler e só quem está logado alterar,
+-- esconde o telefone de quem não entrou, grava o histórico de alterações
 -- e carrega o histórico da planilha.
 
 create table if not exists public.categories (
@@ -31,10 +32,23 @@ create table if not exists public.analysis_leads (
   description text not null default ''
 );
 
+create table if not exists public.change_log (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  actor text not null,
+  kind text not null,
+  day date,
+  category_id text,
+  summary text not null
+);
+
+create index if not exists change_log_created_at_idx on public.change_log (created_at desc);
+
 alter table public.categories enable row level security;
 alter table public.days enable row level security;
 alter table public.day_counts enable row level security;
 alter table public.analysis_leads enable row level security;
+alter table public.change_log enable row level security;
 
 drop policy if exists "authenticated manage categories" on public.categories;
 drop policy if exists "authenticated manage days" on public.days;
@@ -75,6 +89,11 @@ create policy "authenticated insert analysis_leads" on public.analysis_leads for
 create policy "authenticated update analysis_leads" on public.analysis_leads for update to authenticated using (true) with check (true);
 create policy "authenticated delete analysis_leads" on public.analysis_leads for delete to authenticated using (true);
 
+drop policy if exists "public read change_log" on public.change_log;
+drop policy if exists "authenticated insert change_log" on public.change_log;
+create policy "public read change_log" on public.change_log for select to anon, authenticated using (true);
+create policy "authenticated insert change_log" on public.change_log for insert to authenticated with check (true);
+
 revoke insert, update, delete on public.categories from anon;
 revoke insert, update, delete on public.days from anon;
 revoke insert, update, delete on public.day_counts from anon;
@@ -83,12 +102,17 @@ revoke insert, update, delete on public.analysis_leads from anon;
 grant select on public.categories to anon;
 grant select on public.days to anon;
 grant select on public.day_counts to anon;
-grant select on public.analysis_leads to anon;
+revoke select on table public.analysis_leads from anon;
+grant select (id, day, description) on public.analysis_leads to anon;
+
+revoke insert, update, delete on public.change_log from anon;
+grant select on public.change_log to anon;
 
 grant select, insert, update, delete on public.categories to authenticated;
 grant select, insert, update, delete on public.days to authenticated;
 grant select, insert, update, delete on public.day_counts to authenticated;
 grant select, insert, update, delete on public.analysis_leads to authenticated;
+grant select, insert on public.change_log to authenticated;
 
 insert into public.categories (id, label, group_id, builtin, position) values
 ('comprou', 'Comprou', 'interesse', true, 0),

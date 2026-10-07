@@ -10,23 +10,26 @@ import {
   type ReactNode,
 } from "react";
 import { slugify } from "./categories";
+import { formatDate } from "./format";
 import { seedState } from "./normalize";
 import {
   deleteAnalysis as deleteAnalysisRemote,
   deleteCategory as deleteCategoryRemote,
   deleteDay as deleteDayRemote,
+  fetchChanges,
   fetchState,
   insertCategory,
   reconcileDay,
+  recordChange,
   renameCategory as renameCategoryRemote,
   saveAnalysis as saveAnalysisRemote,
   saveCell,
   saveDay as saveDayRemote,
   syncState,
 } from "./remote";
-import { createSupabaseBrowser, explainSupabaseError } from "./supabase";
+import { createSupabaseBrowser, explainHistoryError, explainSupabaseError } from "./supabase";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { AnalysisLead, Category, DayRecord, GroupId, LeadState } from "./types";
+import type { AnalysisLead, Category, ChangeEntry, DayRecord, GroupId, LeadState } from "./types";
 
 export { normalizeState, seedState } from "./normalize";
 
@@ -127,6 +130,8 @@ type Store = {
   canEdit: boolean;
   loadError: string;
   saveError: string;
+  changes: ChangeEntry[];
+  historyError: string;
   state: LeadState;
   replace: (state: LeadState) => void;
   reset: () => void;
@@ -142,6 +147,23 @@ type Store = {
   signOut: () => void;
 };
 
+function sameCounts(left: Record<string, number>, right: Record<string, number>): boolean {
+  const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
+  for (const key of keys) {
+    if ((left[key] || 0) !== (right[key] || 0)) return false;
+  }
+  return true;
+}
+
+function daySummary(previous: DayRecord | undefined, day: DayRecord): string {
+  const label = formatDate(day.date);
+  if (!previous) return `Lançou ${label}.`;
+  if (previous.review !== day.review && sameCounts(previous.counts, day.counts)) {
+    return day.review === "ok" ? `Marcou ${label} como conferido.` : `Marcou ${label} como pendente.`;
+  }
+  return `Atualizou o lançamento de ${label}.`;
+}
+
 const StoreContext = createContext<Store | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -153,6 +175,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const canEditRef = useRef(false);
   const [loadError, setLoadError] = useState("");
   const [saveError, setSaveError] = useState("");
+  const [changes, setChanges] = useState<ChangeEntry[]>([]);
+  const [historyError, setHistoryError] = useState("");
   const clientRef = useRef<SupabaseClient | null>(null);
   const stateRef = useRef(state);
   const writes = useRef(0);
@@ -169,6 +193,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setSaveError(explainSupabaseError(error));
     } finally {
       writes.current -= 1;
+    }
+  }
+
+  async function writeChange(
+    client: SupabaseClient,
+    entry: { kind: string; day?: string; categoryId?: string; summary: string },
+  ) {
+    try {
+      const saved = await recordChange(client, entry);
+      setChanges((current) => [saved, ...current.filter((item) => item.id !== saved.id)].slice(0, 200));
+      setHistoryError("");
+    } catch (error) {
+      setHistoryError(explainHistoryError(error));
     }
   }
 
@@ -202,6 +239,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (cancel) return;
       dispatch({ type: "replace", state: loaded });
       setReady(true);
+      fetchChanges(active)
+        .then((entries) => {
+          if (!cancel) {
+            setChanges(entries);
+            setHistoryError("");
+          }
+        })
+        .catch((error) => {
+          if (!cancel) setHistoryError(explainHistoryError(error));
+        });
     }
     load(client).catch((error) => {
       if (cancel) return;
@@ -223,6 +270,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           dispatch({ type: "replace", state: fresh });
         })
         .catch((error) => setSaveError(explainSupabaseError(error)));
+      fetchChanges(client)
+        .then((entries) => {
+          if (writes.current > 0) return;
+          setChanges(entries);
+        })
+        .catch((error) => setHistoryError(explainHistoryError(error)));
     }
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
@@ -235,31 +288,64 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     canEdit,
     loadError,
     saveError,
+    changes,
+    historyError,
     state,
     replace: (next) => {
       dispatch({ type: "replace", state: next });
-      void run((client) => syncState(client, next));
+      void run(async (client) => {
+        await syncState(client, next);
+        await writeChange(client, { kind: "importacao", summary: "Substituiu os lançamentos por um arquivo." });
+      });
     },
     reset: () => {
       const seed = seedState();
       dispatch({ type: "reset", state: seed });
-      void run((client) => syncState(client, seed));
+      void run(async (client) => {
+        await syncState(client, seed);
+        await writeChange(client, { kind: "restauracao", summary: "Restaurou a planilha original." });
+      });
     },
     saveDay: (day) => {
+      const previous = stateRef.current.days.find((item) => item.date === day.date);
       dispatch({ type: "save-day", day });
-      void run((client) => saveDayRemote(client, day));
+      void run(async (client) => {
+        await saveDayRemote(client, day);
+        await writeChange(client, { kind: "dia", day: day.date, summary: daySummary(previous, day) });
+      });
     },
     patchCell: (date, categoryId, value) => {
+      const previous = stateRef.current.days.find((item) => item.date === date)?.counts[categoryId] || 0;
+      if (previous === value) return;
+      const label = stateRef.current.categories.find((category) => category.id === categoryId)?.label || categoryId;
       dispatch({ type: "patch-cell", date, categoryId, value });
-      void run((client) => saveCell(client, date, categoryId, value));
+      void run(async (client) => {
+        await saveCell(client, date, categoryId, value);
+        await writeChange(client, {
+          kind: "celula",
+          day: date,
+          categoryId,
+          summary: `${label} em ${formatDate(date)}: ${previous} → ${value}`,
+        });
+      });
     },
     deleteDay: (date) => {
       dispatch({ type: "delete-day", date });
-      void run((client) => deleteDayRemote(client, date));
+      void run(async (client) => {
+        await deleteDayRemote(client, date);
+        await writeChange(client, { kind: "dia", day: date, summary: `Excluiu o lançamento de ${formatDate(date)}.` });
+      });
     },
     reconcile: (date) => {
       dispatch({ type: "reconcile", date });
-      void run((client) => reconcileDay(client, date));
+      void run(async (client) => {
+        await reconcileDay(client, date);
+        await writeChange(client, {
+          kind: "dia",
+          day: date,
+          summary: `Usou a soma dos motivos em ${formatDate(date)}.`,
+        });
+      });
     },
     addCategory: (label, group) => {
       const trimmed = label.trim();
@@ -272,27 +358,50 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const category: Category = { id, label: trimmed, group, builtin: false };
       const position = stateRef.current.categories.length;
       dispatch({ type: "add-category", category });
-      void run((client) => insertCategory(client, category, position));
+      void run(async (client) => {
+        await insertCategory(client, category, position);
+        await writeChange(client, { kind: "motivo", summary: `Criou o motivo ${trimmed}.` });
+      });
     },
     renameCategory: (id, label) => {
       const trimmed = label.trim();
       if (!trimmed) return;
       dispatch({ type: "rename-category", id, label: trimmed });
-      void run((client) => renameCategoryRemote(client, id, trimmed));
+      void run(async (client) => {
+        await renameCategoryRemote(client, id, trimmed);
+        await writeChange(client, { kind: "motivo", summary: `Renomeou um motivo para ${trimmed}.` });
+      });
     },
     deleteCategory: (id) => {
       const category = stateRef.current.categories.find((item) => item.id === id);
       if (!category || category.builtin) return;
       dispatch({ type: "delete-category", id });
-      void run((client) => deleteCategoryRemote(client, id));
+      void run(async (client) => {
+        await deleteCategoryRemote(client, id);
+        await writeChange(client, { kind: "motivo", summary: `Apagou o motivo ${category.label}.` });
+      });
     },
     saveAnalysis: (lead) => {
+      const existed = stateRef.current.analysis.some((item) => item.id === lead.id);
       dispatch({ type: "save-analysis", lead });
-      void run((client) => saveAnalysisRemote(client, lead));
+      void run(async (client) => {
+        await saveAnalysisRemote(client, lead);
+        const when = lead.date ? ` em ${formatDate(lead.date)}` : "";
+        await writeChange(client, {
+          kind: "analise",
+          day: lead.date,
+          summary: existed ? `Atualizou um lead em análise${when}.` : `Incluiu um lead em análise${when}.`,
+        });
+      });
     },
     deleteAnalysis: (id) => {
+      const lead = stateRef.current.analysis.find((item) => item.id === id);
       dispatch({ type: "delete-analysis", id });
-      void run((client) => deleteAnalysisRemote(client, id));
+      void run(async (client) => {
+        await deleteAnalysisRemote(client, id);
+        const when = lead?.date ? ` de ${formatDate(lead.date)}` : "";
+        await writeChange(client, { kind: "analise", day: lead?.date, summary: `Removeu um lead em análise${when}.` });
+      });
     },
     signOut: () => {
       canEditRef.current = false;

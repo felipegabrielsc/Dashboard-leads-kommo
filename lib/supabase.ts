@@ -29,3 +29,16 @@ export function explainSupabaseError(error: unknown): string {
   }
   return message;
 }
+
+export function explainHistoryError(error: unknown): string {
+  const message =
+    error && typeof error === "object" && "message" in error
+      ? String((error as { message: unknown }).message)
+      : error instanceof Error
+        ? error.message
+        : "";
+  if (/change_log|relation|schema cache|does not exist|permission denied|row-level security|42501/i.test(message)) {
+    return "O histórico ainda não está liberado. Execute supabase/historico-e-telefones.sql no SQL Editor.";
+  }
+  return explainSupabaseError(error);
+}
