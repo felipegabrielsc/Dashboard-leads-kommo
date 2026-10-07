@@ -24,5 +24,8 @@ export function explainSupabaseError(error: unknown): string {
   if (/relation|schema cache|does not exist/i.test(message)) {
     return "O Supabase ainda não tem as tabelas. Abra o SQL Editor e execute o arquivo supabase/schema.sql.";
   }
+  if (/permission denied|row-level security|42501/i.test(message)) {
+    return "Sem permissão para essa ação. A consulta sem login depende de supabase/leitura-publica.sql; lançar, editar e apagar exige uma conta.";
+  }
   return message;
 }

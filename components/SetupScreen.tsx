@@ -12,6 +12,7 @@ export function SetupScreen() {
           <code className="rounded bg-white px-1">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>, no arquivo .env.local e nas variáveis da Vercel.
         </li>
         <li>Em Authentication → URL Configuration, coloque o endereço do site publicado.</li>
+        <li>Se o SQL antigo já rodou, execute também supabase/leitura-publica.sql para liberar a consulta sem login.</li>
       </ol>
     </main>
   );

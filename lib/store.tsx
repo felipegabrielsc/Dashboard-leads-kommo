@@ -124,6 +124,7 @@ type Store = {
   ready: boolean;
   configured: boolean;
   email: string | null;
+  canEdit: boolean;
   loadError: string;
   saveError: string;
   state: LeadState;
@@ -148,6 +149,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [configured, setConfigured] = useState(true);
   const [email, setEmail] = useState<string | null>(null);
+  const [canEdit, setCanEdit] = useState(false);
+  const canEditRef = useRef(false);
   const [loadError, setLoadError] = useState("");
   const [saveError, setSaveError] = useState("");
   const clientRef = useRef<SupabaseClient | null>(null);
@@ -157,7 +160,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   async function run(task: (client: SupabaseClient) => Promise<void>) {
     const client = clientRef.current;
-    if (!client) return;
+    if (!client || !canEditRef.current) return;
     writes.current += 1;
     try {
       await task(client);
@@ -181,9 +184,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     async function load(active: SupabaseClient) {
       const { data } = await active.auth.getUser();
       if (cancel) return;
+      const signedIn = Boolean(data.user);
       setEmail(data.user?.email ?? null);
+      setCanEdit(signedIn);
+      canEditRef.current = signedIn;
       let loaded = await fetchState(active);
-      if (!loaded.days.length && !loaded.analysis.length && loaded.categories.every((category) => category.builtin)) {
+      if (
+        signedIn &&
+        !loaded.days.length &&
+        !loaded.analysis.length &&
+        loaded.categories.every((category) => category.builtin)
+      ) {
         const seed = seedState();
         await syncState(active, seed);
         loaded = seed;
@@ -221,6 +232,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     ready,
     configured,
     email,
+    canEdit,
     loadError,
     saveError,
     state,
@@ -283,8 +295,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       void run((client) => deleteAnalysisRemote(client, id));
     },
     signOut: () => {
+      canEditRef.current = false;
       void clientRef.current?.auth.signOut().finally(() => {
-        window.location.assign("/login");
+        window.location.assign("/");
       });
     },
   };
