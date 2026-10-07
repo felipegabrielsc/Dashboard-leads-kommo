@@ -270,28 +270,6 @@ export function DashboardApp() {
             />
           </div>
         </div>
-        <div className="mx-auto flex max-w-[1440px] items-center gap-2 px-4 pb-3 lg:hidden">
-          <button type="button" className="btn" onClick={() => setFiltersOpen((open) => !open)} aria-expanded={filtersOpen}>
-            {filtersOpen ? "Ocultar filtros" : "Filtros"}
-            {activeFilterCount(filters) > 0 ? ` (${activeFilterCount(filters)})` : ""}
-          </button>
-          {activeFilterCount(filters) > 0 && (
-            <button type="button" className="text-sm text-mute" onClick={() => setFilters(defaultFilters())}>
-              Limpar
-            </button>
-          )}
-        </div>
-        <div className={filtersOpen ? "block" : "hidden lg:block"}>
-          <FilterBar
-            filters={filters}
-            months={monthOptions}
-            categories={state.categories}
-            canSeePhones={leads.canEdit}
-            onChange={setFilters}
-            onPreset={setPreset}
-            presetActive={presetActive}
-          />
-        </div>
         <nav className="mx-auto flex max-w-[1440px] gap-2 px-4 pb-3" aria-label="Seções">
           {(
             [
@@ -313,6 +291,30 @@ export function DashboardApp() {
           ))}
         </nav>
       </header>
+      <div className="border-b border-line/80 bg-paper/80">
+        <div className="mx-auto flex max-w-[1440px] items-center gap-2 px-4 py-3 lg:hidden">
+          <button type="button" className="btn" onClick={() => setFiltersOpen((open) => !open)} aria-expanded={filtersOpen}>
+            {filtersOpen ? "Ocultar filtros" : "Filtros"}
+            {activeFilterCount(filters) > 0 ? ` (${activeFilterCount(filters)})` : ""}
+          </button>
+          {activeFilterCount(filters) > 0 && (
+            <button type="button" className="text-sm text-mute" onClick={() => setFilters(defaultFilters())}>
+              Limpar
+            </button>
+          )}
+        </div>
+        <div className={filtersOpen ? "block" : "hidden lg:block"}>
+          <FilterBar
+            filters={filters}
+            months={monthOptions}
+            categories={state.categories}
+            canSeePhones={leads.canEdit}
+            onChange={setFilters}
+            onPreset={setPreset}
+            presetActive={presetActive}
+          />
+        </div>
+      </div>
 
       {(notice || leads.saveError) && (
         <div className="mx-auto mt-4 flex max-w-[1440px] items-center justify-between gap-3 px-4">
