@@ -55,6 +55,10 @@ export function formatDateTime(iso: string): string {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(date);
 }
 
+export function formatBrl(value: number): string {
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+}
+
 export function formatInt(value: number): string {
   return new Intl.NumberFormat("pt-BR").format(Math.round(value));
 }

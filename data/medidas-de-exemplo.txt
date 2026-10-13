@@ -1,0 +1,421 @@
+Caixa 220 x 220 x 160
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 2,92
+200 Caixas R$ 2,50
+500 Caixas R$ 2,25
+1.000 Caixas R$ 1,58
+
+Caixa 150 x 90 x 220
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 1,35
+200 Caixas R$ 1,16
+500 Caixas R$ 1,04
+1.000 Caixas R$ 0,85
+ 
+Caixa 160 x 150 x 310
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 2,53
+200 Caixas R$ 2,16
+500 Caixas R$ 1,95
+1.000 Caixas R$ 1,59
+ 
+Caixa 140 x 100 x 150
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 1,09
+200 Caixas R$ 0,94
+500 Caixas R$ 0,84
+1.000 Caixas R$ 0,69
+ 
+Caixa 160 x 130 x 190
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 1,66
+200 Caixas R$ 1,42
+500 Caixas R$ 1,28
+1.000 Caixas R$ 1,04
+ 
+Caixa 320 x 270 x 160
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 4,37
+200 Caixas R$ 3,74
+500 Caixas R$ 3,37
+1.000 Caixas R$ 2,75
+
+Caixa 250 x 250 x 500
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 5,53
+200 Caixas R$ 5,16
+500 Caixas R$ 4,24
+1.000 Caixas R$ 3,50
+
+Caixa 270 x 200 x 270
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 3,28
+200 Caixas R$ 3,06
+500 Caixas R$ 2,52
+1.000 Caixas R$ 2,08
+
+Caixa corte e vinco 220 x 150 x 70
+1.000 caixas - R$ 2,60 a unidade
+2.000 caixas - R$ 2,25 a unidade
+5.000 caixas - R$ 1,95 a unidade
+
+Caixa 800 x 400 x 800
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 20,71
+200 Caixas R$ 19,33
+500 Caixas R$ 15,88
+1.000 Caixas R$ 13,12
+
+Caixa 120 x 120 x 120
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 1,05
+200 Caixas R$ 0,90
+500 Caixas R$ 0,81
+1.000 Caixas R$ 0,66
+ 
+Caixa 150 x 120 x 110
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 1,12
+200 Caixas R$ 0,96
+500 Caixas R$ 0,87
+1.000 Caixas R$ 0,71
+ 
+Caixa 160 x 110 x 100
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 1,03
+200 Caixas R$ 0,88
+500 Caixas R$ 0,79
+1.000 Caixas R$ 0,65
+
+Caixa 180 x 180 x 240
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 2,66
+200 Caixas R$ 2,28
+500 Caixas R$ 2,05
+1.000 Caixas R$ 1,44
+ 
+Caixa 180 x 180 x 150
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 2,10
+200 Caixas R$ 1,80
+500 Caixas R$ 1,62
+1.000 Caixas R$ 1,14
+ 
+Caixa 220 x 220 x 160
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 2,92
+200 Caixas R$ 2,50
+500 Caixas R$ 2,25
+1.000 Caixas R$ 1,58
+
+Caixa 600 x 400 x 400
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 11,57
+200 Caixas R$ 10,80
+500 Caixas R$ 8,87
+1.000 Caixas R$ 7,33
+ 
+Caixa 500 x 400 x 300
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 9,14
+200 Caixas R$ 8,53
+500 Caixas R$ 7,01
+1.000 Caixas R$ 5,79
+
+Caixa 350 x 270 x 290
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 5,95
+200 Caixas R$ 5,10
+500 Caixas R$ 4,59
+1.000 Caixas R$ 3,74
+
+Caixa 400 x 100 x 700
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 6,88
+200 Caixas R$ 5,90
+500 Caixas R$ 5,31
+1.000 Caixas R$ 4,33
+
+Caixa 380 x 260 x 340
+Papelão Onda Dupla
+Quantidade Valor Unitário
+100 Caixas R$ 9,63
+200 Caixas R$ 8,99
+500 Caixas R$ 7,38
+1.000 Caixas R$ 6,10
+ 
+Caixa 380 x 260 x 340
+Papelão Onda Dupla Reforçada.
+Quantidade Valor Unitário
+100 Caixas R$ 13,54
+200 Caixas R$ 12,64
+500 Caixas R$ 10,38
+1.000 Caixas R$ 8,58
+
+Caixa 120 x 110 x 70
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 1,10
+200 Caixas R$ 0,90
+500 Caixas R$ 0,70
+1.000 Caixas R$ 0,55
+ 
+Caixa 170 x 110 x 90
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 1,30
+200 Caixas R$ 1,10
+500 Caixas R$ 0,90
+1.000 Caixas R$ 0,75
+
+Caixa 120 x 110 x 70
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 1,10
+200 Caixas R$ 0,90
+500 Caixas R$ 0,70
+1.000 Caixas R$ 0,55
+ 
+Caixa 170 x 110 x 90
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 1,30
+200 Caixas R$ 1,10
+500 Caixas R$ 0,90
+1.000 Caixas R$ 0,75
+
+Caixa 900 x 80 x 650
+Quantidade Valor Unitário
+100 Caixas R$ 12,09
+200 Caixas R$ 10,36
+500 Caixas R$ 9,32
+1.000 Caixas R$ 7,60
+
+Caixa 260 x 160 x 160
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 2,36
+200 Caixas R$ 2,02
+500 Caixas R$ 1,82
+1.000 Caixas R$ 1,48
+
+Caixa 270 x 220 x 130
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 2,98
+200 Caixas R$ 2,56
+500 Caixas R$ 2,30
+1.000 Caixas R$ 1,87
+ 
+Caixa 200 x 150 x 120
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 1,68
+200 Caixas R$ 1,44
+500 Caixas R$ 1,29
+1.000 Caixas R$ 1,05
+
+Caixa 600 x 200 x 200
+Papelão Onda C
+Quantidade Valor Unitário
+100 Caixas R$ 6,18
+200 Caixas R$ 5,30
+500 Caixas R$ 4,77
+1.000 Caixas R$ 3,88
+ 
+Caixa 600 x 400 x 400
+Papelão Onda C
+Quantidade Valor Unitário
+100 Caixas R$ 15,26
+200 Caixas R$ 13,08
+500 Caixas R$ 11,77
+1.000 Caixas R$ 9,59
+
+Caixa 160 x 110 x 80
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 1,20
+200 Caixas R$ 1,05
+500 Caixas R$ 0,90
+1.000 Caixas R$ 0,80
+
+Caixa 240 x 240 x 615
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 7,07
+200 Caixas R$ 6,06
+500 Caixas R$ 5,45
+1.000 Caixas R$ 4,44
+ 
+Caixa 355 x 355 x 615
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 11,70
+200 Caixas R$ 10,03
+500 Caixas R$ 9,03
+1.000 Caixas R$ 7,35
+
+Caixa 120 x 120 x 610
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 3,14
+200 Caixas R$ 2,69
+500 Caixas R$ 2,42
+1.000 Caixas R$ 1,98
+ 
+Caixa 235 x 120 x 610
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 4,53
+200 Caixas R$ 3,88
+500 Caixas R$ 3,50
+1.000 Caixas R$ 2,85
+
+Caixa 120 x 80 x 250 -Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 1,50
+200 Caixas R$ 1,35
+500 Caixas R$ 1,15
+1.000 Caixas R$ 1,05
+ 
+Caixa 130 x 120 x 340
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 2,07
+200 Caixas R$ 1,77
+500 Caixas R$ 1,59
+1.000 Caixas R$ 1,30
+
+Caixa 600 x 400 x 80
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 8,14
+200 Caixas R$ 6,98
+500 Caixas R$ 6,28
+1.000 Caixas R$ 5,12
+ 
+Esse é o formato que sugeri:
+Caixa 400 x 80 x 600
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 5,63
+200 Caixas R$ 4,83
+500 Caixas R$ 4,35
+1.000 Caixas R$ 3,54
+
+Caixa 300 x 300 x 180 com divisória para 25 itens
+Quantidade Valor Unitário
+100 Caixas R$ 7,00
+200 Caixas R$ 6,10
+500 Caixas R$ 5,40
+1.000 Caixas R$ 4,75
+
+Caixa 270 x 220 x 100
+Papelão Onda B
+Quantidade Valor Unitário
+500 Caixas R$ 2,36
+1.000 Caixas R$ 1,72
+ 
+Caixa 270 x 220 x 100
+Papelão Onda C
+Quantidade Valor Unitário
+500 Caixas R$ 2,63
+1.000 Caixas R$ 1,94
+ 
+ 
+Caixa 270 x 220 x 100
+Papelão Onda Dupla
+Quantidade Valor Unitário
+500 Caixas R$ 3,85
+1.000 Caixas R$ 2,93
+
+Caixa 280 x 270 x 100
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 3,52
+200 Caixas R$ 3,02
+500 Caixas R$ 2,72
+1.000 Caixas R$ 2,21
+ 
+Caixa 280 x 270 x 100
+Papelão Onda C
+Quantidade Valor Unitário
+100 Caixas R$ 3,98
+200 Caixas R$ 3,41
+500 Caixas R$ 3,07
+1.000 Caixas R$ 2,50
+
+Caixa 280 x 270 x 100
+Papelão Onda Dupla
+Quantidade Valor Unitário
+100 Caixas R$ 6,02
+200 Caixas R$ 5,16
+500 Caixas R$ 4,64
+1.000 Caixas R$ 3,78
+
+Caixa 140 x 60 x 270
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 1,73
+200 Caixas R$ 1,39
+500 Caixas R$ 1,21
+1.000 Caixas R$ 1,04
+ 
+ 
+Caixa 140 x 60 x 180
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 1,27
+200 Caixas R$ 1,02
+500 Caixas R$ 0,89
+1.000 Caixas R$ 0,76
+
+Caixa 600 x 140 x 180
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 3,49
+200 Caixas R$ 2,91
+500 Caixas R$ 2,56
+1.000 Caixas R$ 2,21
+
+Caixa 380 x 260 x 250
+Papelão Onda C
+Quantidade Valor Unitário
+100 Caixas R$ 5,77
+200 Caixas R$ 4,81
+500 Caixas R$ 4,23
+1.000 Caixas R$ 3,65
+
+Caixa 430 x 310 x 250
+Papelão Onda B
+Quantidade Valor Unitário
+100 Caixas R$ 6,05
+200 Caixas R$ 5,65
+500 Caixas R$ 4,64
+1.000 Caixas R$ 3,83
+
+Caixa 450 x 300 x 200
+Quantidade Valor Unitário
+100 Caixas R$ 4,60
+200 Caixas R$ 4,30
+500 Caixas R$ 3,90
+1.000 Caixas R$ 3,60

@@ -42,3 +42,16 @@ export function explainHistoryError(error: unknown): string {
   }
   return explainSupabaseError(error);
 }
+
+export function explainQuotesError(error: unknown): string {
+  const message =
+    error && typeof error === "object" && "message" in error
+      ? String((error as { message: unknown }).message)
+      : error instanceof Error
+        ? error.message
+        : "";
+  if (/quotes|relation|schema cache|does not exist|permission denied|row-level security|42501/i.test(message)) {
+    return "Os orçamentos ainda não estão no banco. Execute supabase/orcamentos.sql no SQL Editor.";
+  }
+  return explainSupabaseError(error);
+}
