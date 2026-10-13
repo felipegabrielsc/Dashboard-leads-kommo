@@ -444,9 +444,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         try {
           await upsertQuotes(client, incoming);
           setQuotesError("");
+          const only = incoming.length === 1 ? incoming[0] : null;
           await writeChange(client, {
             kind: "orcamento",
-            summary: `Importou ${incoming.length} orçamentos de caixas, ${added} novos.`,
+            summary: only
+              ? `${added ? "Cadastrou" : "Atualizou"} a caixa ${only.width} x ${only.depth} x ${only.height}${only.material ? `, ${only.material}` : ""}.`
+              : `Importou ${incoming.length} orçamentos de caixas, ${added} novos.`,
           });
         } catch (error) {
           setQuotesError(explainQuotesError(error));

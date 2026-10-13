@@ -10,7 +10,7 @@ Qualquer visitante vê o painel, os filtros e os lançamentos. Só uma conta log
 
 O painel compara o período escolhido com o intervalo anterior da mesma duração e aponta dias úteis sem lançamento. A aba Histórico mostra quem alterou cada célula, dia ou motivo.
 
-Quem está logado também abre o botão Orçamentos: pesquisa caixas pela medida e importa um txt com quantidade e valor unitário.
+Quem está logado também abre o botão Orçamentos: pesquisa caixas pela medida, cadastra uma medida na mão e importa um txt com quantidade e valor unitário. O catálogo dessa pesquisa baixa em PDF para divulgar.
 
 Se o `schema.sql` antigo já foi executado, rode `supabase/leitura-publica.sql`, `supabase/historico-e-telefones.sql` e `supabase/orcamentos.sql` no SQL Editor.
 
