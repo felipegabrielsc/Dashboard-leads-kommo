@@ -16,7 +16,9 @@ import {
   deleteAnalysis as deleteAnalysisRemote,
   deleteCategory as deleteCategoryRemote,
   deleteDay as deleteDayRemote,
+  deleteQuote as deleteQuoteRemote,
   fetchChanges,
+  fetchQuotes,
   fetchState,
   insertCategory,
   reconcileDay,
@@ -26,8 +28,10 @@ import {
   saveCell,
   saveDay as saveDayRemote,
   syncState,
+  upsertQuotes,
 } from "./remote";
-import { createSupabaseBrowser, explainHistoryError, explainSupabaseError } from "./supabase";
+import { mergeQuotes, type Quote } from "./quotes";
+import { createSupabaseBrowser, explainHistoryError, explainQuotesError, explainSupabaseError } from "./supabase";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AnalysisLead, Category, ChangeEntry, DayRecord, GroupId, LeadState } from "./types";
 
@@ -132,6 +136,8 @@ type Store = {
   saveError: string;
   changes: ChangeEntry[];
   historyError: string;
+  quotes: Quote[];
+  quotesError: string;
   state: LeadState;
   replace: (state: LeadState) => void;
   reset: () => void;
@@ -144,6 +150,8 @@ type Store = {
   deleteCategory: (id: string) => void;
   saveAnalysis: (lead: AnalysisLead) => void;
   deleteAnalysis: (id: string) => void;
+  importQuotes: (quotes: Quote[]) => void;
+  deleteQuote: (id: string) => void;
   signOut: () => void;
 };
 
@@ -177,6 +185,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [saveError, setSaveError] = useState("");
   const [changes, setChanges] = useState<ChangeEntry[]>([]);
   const [historyError, setHistoryError] = useState("");
+  const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [quotesError, setQuotesError] = useState("");
+  const quotesRef = useRef(quotes);
+  quotesRef.current = quotes;
   const clientRef = useRef<SupabaseClient | null>(null);
   const stateRef = useRef(state);
   const writes = useRef(0);
@@ -249,6 +261,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         .catch((error) => {
           if (!cancel) setHistoryError(explainHistoryError(error));
         });
+      if (signedIn) {
+        fetchQuotes(active)
+          .then((rows) => {
+            if (!cancel) {
+              setQuotes(rows);
+              setQuotesError("");
+            }
+          })
+          .catch((error) => {
+            if (!cancel) setQuotesError(explainQuotesError(error));
+          });
+      }
     }
     load(client).catch((error) => {
       if (cancel) return;
@@ -276,6 +300,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           setChanges(entries);
         })
         .catch((error) => setHistoryError(explainHistoryError(error)));
+      if (canEditRef.current) {
+        fetchQuotes(client)
+          .then((rows) => {
+            if (writes.current > 0) return;
+            setQuotes(rows);
+          })
+          .catch((error) => setQuotesError(explainQuotesError(error)));
+      }
     }
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
@@ -290,6 +322,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     saveError,
     changes,
     historyError,
+    quotes,
+    quotesError,
     state,
     replace: (next) => {
       dispatch({ type: "replace", state: next });
@@ -401,6 +435,40 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         await deleteAnalysisRemote(client, id);
         const when = lead?.date ? ` de ${formatDate(lead.date)}` : "";
         await writeChange(client, { kind: "analise", day: lead?.date, summary: `Removeu um lead em análise${when}.` });
+      });
+    },
+    importQuotes: (incoming) => {
+      const { quotes: merged, added } = mergeQuotes(quotesRef.current, incoming);
+      setQuotes(merged);
+      void run(async (client) => {
+        try {
+          await upsertQuotes(client, incoming);
+          setQuotesError("");
+          await writeChange(client, {
+            kind: "orcamento",
+            summary: `Importou ${incoming.length} orçamentos de caixas, ${added} novos.`,
+          });
+        } catch (error) {
+          setQuotesError(explainQuotesError(error));
+        }
+      });
+    },
+    deleteQuote: (id) => {
+      const quote = quotesRef.current.find((item) => item.id === id);
+      setQuotes((current) => current.filter((item) => item.id !== id));
+      void run(async (client) => {
+        try {
+          await deleteQuoteRemote(client, id);
+          setQuotesError("");
+          await writeChange(client, {
+            kind: "orcamento",
+            summary: quote
+              ? `Removeu o orçamento ${quote.width} x ${quote.depth} x ${quote.height}.`
+              : "Removeu um orçamento.",
+          });
+        } catch (error) {
+          setQuotesError(explainQuotesError(error));
+        }
       });
     },
     signOut: () => {

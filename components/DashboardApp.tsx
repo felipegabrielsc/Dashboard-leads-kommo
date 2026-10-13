@@ -8,6 +8,7 @@ import { DayEditor } from "@/components/DayEditor";
 import { DaysTable } from "@/components/DaysTable";
 import { FilterBar } from "@/components/FilterBar";
 import { HistoryPanel } from "@/components/HistoryPanel";
+import { QuotesPanel } from "@/components/QuotesPanel";
 import { Summary } from "@/components/Summary";
 import { TrendCharts } from "@/components/TrendCharts";
 import { sumCategories } from "@/lib/categories";
@@ -40,6 +41,7 @@ export function DashboardApp() {
   const [notice, setNotice] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [historyDay, setHistoryDay] = useState("");
+  const [quotesOpen, setQuotesOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const { state } = leads;
@@ -214,6 +216,9 @@ export function DashboardApp() {
                 </button>
                 <button type="button" className="btn" onClick={() => fileRef.current?.click()}>
                   Importar
+                </button>
+                <button type="button" className="btn" onClick={() => setQuotesOpen(true)}>
+                  Orçamentos
                 </button>
               </>
             )}
@@ -418,6 +423,15 @@ export function DashboardApp() {
           categories={state.categories}
           onClose={() => setEditor(undefined)}
           onSave={saveDay}
+        />
+      )}
+      {quotesOpen && leads.canEdit && (
+        <QuotesPanel
+          quotes={leads.quotes}
+          error={leads.quotesError}
+          onClose={() => setQuotesOpen(false)}
+          onImport={leads.importQuotes}
+          onDelete={leads.deleteQuote}
         />
       )}
       {motivesOpen && (

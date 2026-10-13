@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { normalizeState } from "./normalize";
+import type { Quote, QuoteTier } from "./quotes";
 import type { AnalysisLead, Category, ChangeEntry, DayRecord, LeadState } from "./types";
 
 type CategoryRow = {
@@ -291,6 +292,67 @@ export async function fetchChanges(client: SupabaseClient): Promise<ChangeEntry[
     .limit(200);
   throwIf(error);
   return ((data || []) as ChangeRow[]).map(mapChange);
+}
+
+type QuoteRow = {
+  id: string;
+  width: number;
+  depth: number;
+  height: number;
+  material: string;
+  note: string;
+  tiers: QuoteTier[] | null;
+};
+
+function asTiers(value: QuoteTier[] | null): QuoteTier[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((tier) => {
+    const quantity = Number(tier?.quantity);
+    const unitPrice = Number(tier?.unitPrice);
+    if (!quantity || !Number.isFinite(unitPrice)) return [];
+    return [{ quantity, unitPrice }];
+  });
+}
+
+export async function fetchQuotes(client: SupabaseClient): Promise<Quote[]> {
+  const { data, error } = await client
+    .from("quotes")
+    .select("id,width,depth,height,material,note,tiers")
+    .order("width");
+  throwIf(error);
+  return ((data || []) as QuoteRow[]).map((row) => ({
+    id: row.id,
+    width: row.width,
+    depth: row.depth,
+    height: row.height,
+    material: row.material || "",
+    note: row.note || "",
+    tiers: asTiers(row.tiers),
+  }));
+}
+
+export async function upsertQuotes(client: SupabaseClient, quotes: Quote[]) {
+  if (!quotes.length) return;
+  throwIf(
+    (
+      await client.from("quotes").upsert(
+        quotes.map((quote) => ({
+          id: quote.id,
+          width: quote.width,
+          depth: quote.depth,
+          height: quote.height,
+          material: quote.material,
+          note: quote.note,
+          tiers: quote.tiers,
+          updated_at: new Date().toISOString(),
+        })),
+      )
+    ).error,
+  );
+}
+
+export async function deleteQuote(client: SupabaseClient, id: string) {
+  throwIf((await client.from("quotes").delete().eq("id", id)).error);
 }
 
 export async function recordChange(
