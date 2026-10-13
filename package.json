@@ -6,11 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "tsx lib/metrics.test.ts && tsx lib/parseSheet.test.ts && tsx lib/quotes.test.ts"
+    "test": "tsx lib/metrics.test.ts && tsx lib/parseSheet.test.ts && tsx lib/quotes.test.ts && tsx lib/catalogPdf.test.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
+    "jspdf": "^4.2.1",
     "next": "^15.5.4",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",

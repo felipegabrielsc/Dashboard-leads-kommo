@@ -122,6 +122,108 @@ export function searchQuotes(quotes: Quote[], query: string, material = ""): Quo
   });
 }
 
+export type QuoteDraft = {
+  width: string;
+  depth: string;
+  height: string;
+  material: string;
+  note: string;
+  tiers: { quantity: string; unitPrice: string }[];
+};
+
+export function emptyQuoteDraft(): QuoteDraft {
+  return {
+    width: "",
+    depth: "",
+    height: "",
+    material: "",
+    note: "",
+    tiers: [{ quantity: "", unitPrice: "" }],
+  };
+}
+
+export function draftFromQuote(quote: Quote): QuoteDraft {
+  return {
+    width: String(quote.width),
+    depth: String(quote.depth),
+    height: String(quote.height),
+    material: quote.material,
+    note: quote.note,
+    tiers: quote.tiers.map((tier) => ({
+      quantity: String(tier.quantity),
+      unitPrice: tier.unitPrice.toFixed(2).replace(".", ","),
+    })),
+  };
+}
+
+export function parseWholeNumber(value: string): number | null {
+  const cleaned = value.trim().replace(/\s/g, "").replace(/\./g, "");
+  if (!/^\d+$/.test(cleaned)) return null;
+  const number = Number(cleaned);
+  return number > 0 ? number : null;
+}
+
+export function parseMoney(value: string): number | null {
+  const cleaned = value.trim().replace(/\s/g, "").replace(/^R\$/i, "");
+  if (!cleaned) return null;
+  const normalized = cleaned.includes(",") ? cleaned.replace(/\./g, "").replace(",", ".") : cleaned;
+  if (!/^\d+(\.\d{1,2})?$/.test(normalized)) return null;
+  const number = Number(normalized);
+  return Number.isFinite(number) ? number : null;
+}
+
+export function buildQuote(draft: QuoteDraft): { quote: Quote } | { error: string } {
+  const width = parseWholeNumber(draft.width);
+  const depth = parseWholeNumber(draft.depth);
+  const height = parseWholeNumber(draft.height);
+  if (!width || !depth || !height) return { error: "Informe as três medidas, só com números." };
+
+  const tiers: QuoteTier[] = [];
+  const seen = new Set<number>();
+  for (const row of draft.tiers) {
+    if (!row.quantity.trim() && !row.unitPrice.trim()) continue;
+    const quantity = parseWholeNumber(row.quantity);
+    const unitPrice = parseMoney(row.unitPrice);
+    if (!quantity || unitPrice == null) return { error: "Cada faixa precisa de quantidade e valor, como 100 e 2,92." };
+    if (seen.has(quantity)) return { error: "Há duas faixas com a mesma quantidade." };
+    seen.add(quantity);
+    tiers.push({ quantity, unitPrice });
+  }
+  if (!tiers.length) return { error: "Inclua pelo menos uma faixa de quantidade e valor." };
+  tiers.sort((a, b) => a.quantity - b.quantity);
+
+  const partial = {
+    width,
+    depth,
+    height,
+    material: draft.material.trim().replace(/\.$/, ""),
+    note: draft.note.trim(),
+    tiers,
+  };
+  return { quote: { ...partial, id: quoteId(partial) } };
+}
+
+export function lowestUnitPrice(quote: Quote): number {
+  return Math.min(...quote.tiers.map((tier) => tier.unitPrice));
+}
+
+export function groupQuotes(quotes: Quote[]): { material: string; quotes: Quote[] }[] {
+  const groups = new Map<string, Quote[]>();
+  for (const quote of quotes) {
+    const label = quote.material || "Papelão não informado";
+    const list = groups.get(label);
+    if (list) list.push(quote);
+    else groups.set(label, [quote]);
+  }
+  return [...groups.keys()]
+    .sort((a, b) => {
+      if (a === "Papelão não informado") return 1;
+      if (b === "Papelão não informado") return -1;
+      return a.localeCompare(b, "pt-BR");
+    })
+    .map((material) => ({ material, quotes: groups.get(material) || [] }));
+}
+
 export function mergeQuotes(current: Quote[], incoming: Quote[]): { quotes: Quote[]; added: number; updated: number } {
   const byId = new Map(current.map((quote) => [quote.id, quote]));
   let added = 0;
