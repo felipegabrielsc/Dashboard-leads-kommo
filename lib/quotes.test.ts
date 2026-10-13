@@ -29,7 +29,7 @@ assert.equal(dieCut.tiers.at(-1)?.quantity, 5000);
 
 const sameLine = quotes.find((quote) => quote.width === 120 && quote.depth === 80 && quote.height === 250);
 assert.ok(sameLine);
-assert.match(sameLine.material, /onda b/i);
+assert.equal(sameLine.material, "Papelão Onda B");
 
 const divider = quotes.find((quote) => quote.width === 300 && quote.depth === 300 && quote.height === 180);
 assert.ok(divider);

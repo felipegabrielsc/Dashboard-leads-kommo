@@ -44,8 +44,8 @@ function parsePriceLine(line: string): QuoteTier | null {
 function splitExtra(before: string, after: string): { material: string; note: string } {
   const material: string[] = [];
   const note: string[] = [];
-  for (const part of [before, after.replace(/^[-–—]\s*/, "")]) {
-    const text = part.replace(/\s+/g, " ").trim().replace(/\.$/, "");
+  for (const part of [before, after]) {
+    const text = part.replace(/\s+/g, " ").trim().replace(/^[-–—]\s*/, "").replace(/\.$/, "").trim();
     if (!text) continue;
     if (/papel[aã]o/i.test(text)) material.push(text);
     else note.push(text);
