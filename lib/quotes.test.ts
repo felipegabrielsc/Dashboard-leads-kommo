@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { parseQuotes, searchQuotes } from "./quotes";
+import { buildQuote, draftFromQuote, parseQuotes, searchQuotes } from "./quotes";
 
 const text = readFileSync(new URL("../data/medidas-de-exemplo.txt", import.meta.url), "utf8");
 const quotes = parseQuotes(text);
@@ -51,5 +51,38 @@ assert.equal(searchQuotes(quotes, "220 x 150 x 70").length, 1);
 assert.equal(searchQuotes(quotes, "onda dupla reforcada").length, 1);
 assert.ok(searchQuotes(quotes, "220").length > 1);
 assert.equal(searchQuotes(quotes, "900 x 80").some((quote) => quote.height === 650), true);
+
+const manual = buildQuote({
+  width: "300",
+  depth: "200",
+  height: "100",
+  material: "Papelão Onda B",
+  note: "com tampa",
+  tiers: [
+    { quantity: "1.000", unitPrice: "1,40" },
+    { quantity: "100", unitPrice: "R$ 2,10" },
+  ],
+});
+if (!("quote" in manual)) throw new Error(manual.error);
+assert.equal(manual.quote.width, 300);
+assert.deepEqual(
+  manual.quote.tiers.map((tier) => [tier.quantity, tier.unitPrice]),
+  [
+    [100, 2.1],
+    [1000, 1.4],
+  ],
+);
+assert.match(manual.quote.note, /tampa/);
+assert.equal(draftFromQuote(manual.quote).tiers[0]?.unitPrice, "2,10");
+
+const missingPrice = buildQuote({
+  width: "10",
+  depth: "10",
+  height: "10",
+  material: "",
+  note: "",
+  tiers: [{ quantity: "100", unitPrice: "" }],
+});
+assert.ok("error" in missingPrice);
 
 console.log("quotes ok", quotes.length);
