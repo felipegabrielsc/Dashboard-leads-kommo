@@ -106,7 +106,8 @@ revoke select on table public.analysis_leads from anon;
 grant select (id, day, description) on public.analysis_leads to anon;
 
 revoke insert, update, delete on public.change_log from anon;
-grant select on public.change_log to anon;
+revoke select on table public.change_log from anon;
+grant select (id, created_at, kind, day, category_id, summary) on public.change_log to anon;
 
 grant select, insert, update, delete on public.categories to authenticated;
 grant select, insert, update, delete on public.days to authenticated;
@@ -138,6 +139,25 @@ create policy "authenticated delete quotes" on public.quotes for delete to authe
 
 revoke all on public.quotes from anon;
 grant select, insert, update, delete on public.quotes to authenticated;
+
+create table if not exists public.catalog_profile (
+  id text primary key,
+  company_name text not null default '',
+  whatsapp text not null default '',
+  valid_until date
+);
+
+alter table public.catalog_profile enable row level security;
+
+drop policy if exists "authenticated read catalog_profile" on public.catalog_profile;
+drop policy if exists "authenticated insert catalog_profile" on public.catalog_profile;
+drop policy if exists "authenticated update catalog_profile" on public.catalog_profile;
+create policy "authenticated read catalog_profile" on public.catalog_profile for select to authenticated using (true);
+create policy "authenticated insert catalog_profile" on public.catalog_profile for insert to authenticated with check (true);
+create policy "authenticated update catalog_profile" on public.catalog_profile for update to authenticated using (true) with check (true);
+
+revoke all on public.catalog_profile from anon;
+grant select, insert, update on public.catalog_profile to authenticated;
 
 insert into public.categories (id, label, group_id, builtin, position) values
 ('comprou', 'Comprou', 'interesse', true, 0),

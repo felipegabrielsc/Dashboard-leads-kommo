@@ -18,6 +18,7 @@ import {
   deleteDay as deleteDayRemote,
   deleteQuote as deleteQuoteRemote,
   fetchChanges,
+  fetchCatalogProfile,
   fetchQuotes,
   fetchState,
   insertCategory,
@@ -25,6 +26,7 @@ import {
   recordChange,
   renameCategory as renameCategoryRemote,
   saveAnalysis as saveAnalysisRemote,
+  saveCatalogProfile as saveCatalogProfileRemote,
   saveCell,
   saveDay as saveDayRemote,
   syncState,
@@ -33,7 +35,7 @@ import {
 import { mergeQuotes, type Quote } from "./quotes";
 import { createSupabaseBrowser, explainHistoryError, explainQuotesError, explainSupabaseError } from "./supabase";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { AnalysisLead, Category, ChangeEntry, DayRecord, GroupId, LeadState } from "./types";
+import { emptyCatalogIdentity, type AnalysisLead, type CatalogIdentity, type Category, type ChangeEntry, type DayRecord, type GroupId, type LeadState } from "./types";
 
 export { normalizeState, seedState } from "./normalize";
 
@@ -138,6 +140,7 @@ type Store = {
   historyError: string;
   quotes: Quote[];
   quotesError: string;
+  catalogProfile: CatalogIdentity;
   state: LeadState;
   replace: (state: LeadState) => void;
   reset: () => void;
@@ -152,6 +155,7 @@ type Store = {
   deleteAnalysis: (id: string) => void;
   importQuotes: (quotes: Quote[]) => void;
   deleteQuote: (id: string) => void;
+  saveCatalogProfile: (profile: CatalogIdentity) => void;
   signOut: () => void;
 };
 
@@ -187,6 +191,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [historyError, setHistoryError] = useState("");
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [quotesError, setQuotesError] = useState("");
+  const [catalogProfile, setCatalogProfile] = useState<CatalogIdentity>(emptyCatalogIdentity);
   const quotesRef = useRef(quotes);
   quotesRef.current = quotes;
   const clientRef = useRef<SupabaseClient | null>(null);
@@ -272,6 +277,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           .catch((error) => {
             if (!cancel) setQuotesError(explainQuotesError(error));
           });
+        fetchCatalogProfile(active)
+          .then((profile) => {
+            if (!cancel) setCatalogProfile(profile);
+          })
+          .catch((error) => {
+            if (!cancel) setQuotesError(explainQuotesError(error));
+          });
       }
     }
     load(client).catch((error) => {
@@ -307,6 +319,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             setQuotes(rows);
           })
           .catch((error) => setQuotesError(explainQuotesError(error)));
+        fetchCatalogProfile(client)
+          .then((profile) => {
+            if (writes.current > 0) return;
+            setCatalogProfile(profile);
+          })
+          .catch((error) => setQuotesError(explainQuotesError(error)));
       }
     }
     window.addEventListener("focus", onFocus);
@@ -324,6 +342,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     historyError,
     quotes,
     quotesError,
+    catalogProfile,
     state,
     replace: (next) => {
       dispatch({ type: "replace", state: next });
@@ -451,6 +470,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               ? `${added ? "Cadastrou" : "Atualizou"} a caixa ${only.width} x ${only.depth} x ${only.height}${only.material ? `, ${only.material}` : ""}.`
               : `Importou ${incoming.length} orçamentos de caixas, ${added} novos.`,
           });
+        } catch (error) {
+          setQuotesError(explainQuotesError(error));
+        }
+      });
+    },
+    saveCatalogProfile: (profile) => {
+      setCatalogProfile(profile);
+      void run(async (client) => {
+        try {
+          await saveCatalogProfileRemote(client, profile);
+          setQuotesError("");
         } catch (error) {
           setQuotesError(explainQuotesError(error));
         }

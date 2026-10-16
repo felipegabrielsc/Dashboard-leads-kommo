@@ -50,6 +50,9 @@ export function explainQuotesError(error: unknown): string {
       : error instanceof Error
         ? error.message
         : "";
+  if (/catalog_profile/i.test(message)) {
+    return "O nome do catálogo ainda não está no banco. Execute supabase/catalogo-identidade.sql no SQL Editor.";
+  }
   if (/quotes|relation|schema cache|does not exist|permission denied|row-level security|42501/i.test(message)) {
     return "Os orçamentos ainda não estão no banco. Execute supabase/orcamentos.sql no SQL Editor.";
   }

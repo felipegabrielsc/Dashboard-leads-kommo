@@ -48,6 +48,9 @@ assert.deepEqual(
 );
 
 assert.equal(searchQuotes(quotes, "220 x 150 x 70").length, 1);
+assert.equal(searchQuotes(quotes, "22 x 15 x 7").length, 1);
+assert.equal(searchQuotes(quotes, "22 x 22 x 16 cm").some((quote) => quote.width === 220 && quote.height === 160), true);
+assert.equal(searchQuotes(quotes, "23,5 x 12 x 61").some((quote) => quote.width === 235 && quote.height === 610), true);
 assert.equal(searchQuotes(quotes, "onda dupla reforcada").length, 1);
 assert.ok(searchQuotes(quotes, "220").length > 1);
 assert.equal(searchQuotes(quotes, "900 x 80").some((quote) => quote.height === 650), true);

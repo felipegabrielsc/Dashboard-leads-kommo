@@ -1,5 +1,9 @@
 import { jsPDF } from "jspdf";
+import { formatDate, formatPhone } from "./format";
 import { formatMeasuresCm, groupQuotes, type Quote } from "./quotes";
+import { emptyCatalogIdentity, type CatalogIdentity } from "./types";
+
+export type { CatalogIdentity };
 
 export type CatalogKind = "precos" | "medidas";
 
@@ -110,11 +114,22 @@ export function catalogFilename(date = new Date(), kind: CatalogKind = "precos")
   return `${prefix}-${year}-${month}-${day}.pdf`;
 }
 
+function contactLine(identity: CatalogIdentity): string {
+  const parts: string[] = [];
+  const phone = identity.whatsapp.trim();
+  if (phone) parts.push(`WhatsApp ${formatPhone(phone)}`);
+  if (identity.validUntil) parts.push(`Válido até ${formatDate(identity.validUntil)}`);
+  return parts.join(" · ");
+}
+
 export function buildCatalogPdf(
   quotes: Quote[],
-  options?: { filtered?: boolean; generatedAt?: Date; kind?: CatalogKind },
+  options?: { filtered?: boolean; generatedAt?: Date; kind?: CatalogKind; identity?: CatalogIdentity },
 ): jsPDF {
   const showPrices = options?.kind !== "medidas";
+  const identity = options?.identity ?? emptyCatalogIdentity;
+  const companyName = identity.companyName.trim();
+  const contact = contactLine(identity);
   const doc = new jsPDF({ unit: "mm", format: "a4", compress: true });
   const generatedAt = options?.generatedAt ?? new Date();
   const dateLabel = new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" }).format(generatedAt);
@@ -133,20 +148,36 @@ export function buildCatalogPdf(
   }
 
   function paintHeader(): number {
-    fill(doc, ink);
-    doc.rect(0, 0, pageW, 28, "F");
-    inkText(doc, cream);
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(18);
-    doc.text(showPrices ? "Catálogo de caixas" : "Catálogo de medidas", margin, 12);
+    doc.setFontSize(11);
+    const nameLines = companyName
+      ? (doc.splitTextToSize(companyName, pageW - margin * 2 - 28) as string[]).slice(0, 2)
+      : [];
+    const headerH = 28 + (nameLines.length ? nameLines.length * 5 : 0) + (contact ? 5 : 0);
+    fill(doc, ink);
+    doc.rect(0, 0, pageW, headerH, "F");
+    inkText(doc, cream);
+    let cursor = 11;
+    if (nameLines.length) {
+      doc.text(nameLines, margin, cursor);
+      cursor += nameLines.length * 5;
+    }
+    doc.setFontSize(nameLines.length ? 16 : 18);
+    doc.text(showPrices ? "Catálogo de caixas" : "Catálogo de medidas", margin, cursor);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
+    doc.text(`${quotes.length} ${quotes.length === 1 ? "caixa" : "caixas"}`, pageW - margin, 11, { align: "right" });
+    cursor += 6;
     const detail = showPrices ? "valores unitários por quantidade" : "sem valores";
     const scope = options?.filtered ? "Recorte da pesquisa · " : "";
-    doc.text(`${scope}Medidas em centímetros · ${detail}`, margin, 18);
-    doc.text(dateLabel, margin, 23);
-    doc.text(`${quotes.length} ${quotes.length === 1 ? "caixa" : "caixas"}`, pageW - margin, 12, { align: "right" });
-    return 36;
+    doc.text(`${scope}Medidas em centímetros · ${detail}`, margin, cursor);
+    cursor += 5;
+    if (contact) {
+      doc.text(contact, margin, cursor);
+      cursor += 5;
+    }
+    doc.text(dateLabel, margin, cursor);
+    return headerH + 8;
   }
 
   function paintFooter() {
@@ -218,6 +249,11 @@ export function buildCatalogPdf(
   return doc;
 }
 
-export function downloadCatalogPdf(quotes: Quote[], filtered: boolean, kind: CatalogKind = "precos") {
-  buildCatalogPdf(quotes, { filtered, kind }).save(catalogFilename(new Date(), kind));
+export function downloadCatalogPdf(
+  quotes: Quote[],
+  filtered: boolean,
+  kind: CatalogKind = "precos",
+  identity: CatalogIdentity = emptyCatalogIdentity,
+) {
+  buildCatalogPdf(quotes, { filtered, kind, identity }).save(catalogFilename(new Date(), kind));
 }
