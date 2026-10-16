@@ -21,7 +21,7 @@ export function HistoryPanel({
         <div>
           <h2 className="font-serif text-2xl">Histórico</h2>
           <p className="mt-1 max-w-xl text-sm text-mute">
-            Quem alterou uma célula, um dia, um motivo ou a lista em análise. O telefone não entra neste registro.
+            Quem alterou uma célula, um dia, um motivo ou a lista em análise. O telefone não entra neste registro. Quem não está logado vê “equipe” no lugar do e-mail.
           </p>
         </div>
         <label className="text-sm text-mute">

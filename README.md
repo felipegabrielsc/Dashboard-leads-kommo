@@ -10,9 +10,11 @@ Qualquer visitante vê o painel, os filtros e os lançamentos. Só uma conta log
 
 O painel compara o período escolhido com o intervalo anterior da mesma duração e aponta dias úteis sem lançamento. A aba Histórico mostra quem alterou cada célula, dia ou motivo.
 
-Quem está logado também abre o botão Orçamentos: pesquisa caixas pela medida, cadastra uma medida na mão e importa um txt com quantidade e valor unitário. O lançamento fica em milímetros. O catálogo dessa pesquisa baixa em PDF já em centímetros, com os preços ou só com as medidas.
+Quem está logado também abre o botão Orçamentos: pesquisa caixas pela medida em milímetros ou centímetros, cadastra uma medida na mão e importa um txt com quantidade e valor unitário. O catálogo baixa em PDF já em centímetros, com os preços ou só com as medidas. O nome, o WhatsApp e a validade preenchidos no painel saem nos dois arquivos.
 
-Se o `schema.sql` antigo já foi executado, rode `supabase/leitura-publica.sql`, `supabase/historico-e-telefones.sql` e `supabase/orcamentos.sql` no SQL Editor.
+O histórico mostra o e-mail de quem alterou só para quem está logado. O visitante vê “equipe”.
+
+Se o `schema.sql` antigo já foi executado, rode `supabase/leitura-publica.sql`, `supabase/historico-e-telefones.sql`, `supabase/orcamentos.sql` e `supabase/catalogo-identidade.sql` no SQL Editor.
 
 ## Rodar localmente
 

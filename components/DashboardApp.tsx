@@ -232,24 +232,6 @@ export function DashboardApp() {
                 </MenuButton>
               </div>
             </details>
-            {leads.canEdit && (
-              <button
-                type="button"
-                className="btn"
-                onClick={() => {
-                  if (
-                    window.confirm(
-                      "Isso substitui os lançamentos da conta pela planilha original. Um backup exportado não é apagado.",
-                    )
-                  ) {
-                    leads.reset();
-                    setNotice("Planilha original restaurada na conta.");
-                  }
-                }}
-              >
-                Restaurar
-              </button>
-            )}
             {leads.canEdit ? (
               <>
                 {leads.email && <span className="self-center text-sm text-mute">{leads.email}</span>}
@@ -429,9 +411,11 @@ export function DashboardApp() {
         <QuotesPanel
           quotes={leads.quotes}
           error={leads.quotesError}
+          profile={leads.catalogProfile}
           onClose={() => setQuotesOpen(false)}
           onImport={leads.importQuotes}
           onDelete={leads.deleteQuote}
+          onSaveProfile={leads.saveCatalogProfile}
         />
       )}
       {motivesOpen && (

@@ -22,7 +22,8 @@ create policy "public read change_log" on public.change_log for select to anon, 
 create policy "authenticated insert change_log" on public.change_log for insert to authenticated with check (true);
 
 revoke insert, update, delete on public.change_log from anon;
-grant select on public.change_log to anon;
+revoke select on table public.change_log from anon;
+grant select (id, created_at, kind, day, category_id, summary) on public.change_log to anon;
 grant select, insert on public.change_log to authenticated;
 
 revoke select on table public.analysis_leads from anon;

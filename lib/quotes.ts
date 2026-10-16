@@ -113,9 +113,22 @@ export function parseQuotes(text: string): Quote[] {
   );
 }
 
+const MEASURE = /\d+(?:[.,]\d+)?/g;
+const THREE_MEASURES = /\d+(?:[.,]\d+)?\s*x\s*\d+(?:[.,]\d+)?\s*x\s*\d+(?:[.,]\d+)?/i;
+
+function askedMeasures(query: string): number[] {
+  return [...query.matchAll(MEASURE)].map((item) => Number(item[0].replace(",", ".")));
+}
+
+function sameMeasure(storedMm: number, asked: number): boolean {
+  if (!Number.isFinite(asked)) return false;
+  if (storedMm === asked) return true;
+  return Math.abs(storedMm / 10 - asked) < 0.051;
+}
+
 export function searchQuotes(quotes: Quote[], query: string, material = ""): Quote[] {
-  const numbers = [...query.matchAll(/\d+/g)].map((item) => Number(item[0]));
-  const ignored = new Set(["x", "caixa", "caixas", "rs", "unidade"]);
+  const numbers = askedMeasures(query);
+  const ignored = new Set(["x", "caixa", "caixas", "rs", "unidade", "cm", "mm", "centimetro", "milimetro"]);
   const words = normalizeLabel(query)
     .split(/[^a-z0-9]+/)
     .filter((token) => token && !ignored.has(token) && !/^\d+$/.test(token));
@@ -123,9 +136,9 @@ export function searchQuotes(quotes: Quote[], query: string, material = ""): Quo
     if (material === "__none__" && quote.material) return false;
     if (material && material !== "__none__" && normalizeLabel(quote.material) !== normalizeLabel(material)) return false;
     const dims = [quote.width, quote.depth, quote.height];
-    if (numbers.length === 3 && /\d\s*x\s*\d\s*x\s*\d/i.test(query)) {
-      if (dims[0] !== numbers[0] || dims[1] !== numbers[1] || dims[2] !== numbers[2]) return false;
-    } else if (numbers.length > 0 && !numbers.every((number) => dims.includes(number))) {
+    if (numbers.length === 3 && THREE_MEASURES.test(query)) {
+      if (!dims.every((dim, index) => sameMeasure(dim, numbers[index]))) return false;
+    } else if (numbers.length > 0 && !numbers.every((number) => dims.some((dim) => sameMeasure(dim, number)))) {
       return false;
     }
     if (!words.length) return true;

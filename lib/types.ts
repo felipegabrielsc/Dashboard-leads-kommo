@@ -24,6 +24,18 @@ export type AnalysisLead = {
   description: string;
 };
 
+export type CatalogIdentity = {
+  companyName: string;
+  whatsapp: string;
+  validUntil: string;
+};
+
+export const emptyCatalogIdentity: CatalogIdentity = {
+  companyName: "",
+  whatsapp: "",
+  validUntil: "",
+};
+
 export type ChangeEntry = {
   id: string;
   createdAt: string;
