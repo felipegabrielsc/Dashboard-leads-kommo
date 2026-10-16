@@ -47,7 +47,9 @@ export function QuoteForm({
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="font-serif text-2xl">{title}</h3>
-          <p className="mt-1 text-sm text-mute">As três medidas entram na ordem do anúncio, como 220 x 220 x 160.</p>
+          <p className="mt-1 text-sm text-mute">
+            As três medidas entram em milímetros, na ordem do anúncio. 220 x 220 x 160 mm vira 22 x 22 x 16 cm no catálogo.
+          </p>
         </div>
         <button type="button" className="text-sm text-mute underline-offset-2 hover:underline" onClick={onCancel}>
           Cancelar

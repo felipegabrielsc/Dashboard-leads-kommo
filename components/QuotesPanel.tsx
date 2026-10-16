@@ -32,6 +32,7 @@ export function QuotesPanel({
   const [notice, setNotice] = useState("");
   const [localError, setLocalError] = useState("");
   const [view, setView] = useState<"lista" | "catalogo">("lista");
+  const [catalogPrices, setCatalogPrices] = useState(true);
   const [form, setForm] = useState<{ title: string; initialId: string; draft: ReturnType<typeof emptyQuoteDraft> } | null>(
     null,
   );
@@ -69,10 +70,10 @@ export function QuotesPanel({
     );
   }
 
-  async function downloadPdf() {
+  async function downloadPdf(kind: "precos" | "medidas") {
     setLocalError("");
     const { downloadCatalogPdf } = await import("@/lib/catalogPdf");
-    downloadCatalogPdf(visible, filtered);
+    downloadCatalogPdf(visible, filtered, kind);
   }
 
   function saveManual(quote: Quote) {
@@ -100,7 +101,7 @@ export function QuotesPanel({
               Orçamentos
             </h2>
             <p className="mt-1 max-w-xl text-sm text-mute">
-              Pesquise, cadastre uma medida ou importe o txt. O catálogo baixa em PDF o que estiver nesta pesquisa.
+              Pesquise e cadastre em milímetros. O catálogo sai em centímetros, com preços ou só com as medidas.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -118,9 +119,17 @@ export function QuotesPanel({
               type="button"
               className="btn disabled:cursor-not-allowed disabled:opacity-40"
               disabled={!visible.length}
-              onClick={() => void downloadPdf()}
+              onClick={() => void downloadPdf("precos")}
             >
-              Baixar PDF
+              PDF com preços
+            </button>
+            <button
+              type="button"
+              className="btn disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={!visible.length}
+              onClick={() => void downloadPdf("medidas")}
+            >
+              PDF só medidas
             </button>
             <button type="button" className="btn" onClick={onClose}>
               Fechar
@@ -214,14 +223,16 @@ export function QuotesPanel({
             <p className="text-sm text-mute">Nenhuma caixa com essa medida ou esse papelão.</p>
           )}
           {view === "catalogo" ? (
-            <QuoteCatalog quotes={visible} filtered={filtered} />
+            <QuoteCatalog quotes={visible} filtered={filtered} prices={catalogPrices} onPrices={setCatalogPrices} />
           ) : (
           <div className="grid gap-3 md:grid-cols-2">
             {visible.map((quote) => (
               <article key={quote.id} className="rounded-2xl border border-line bg-paper p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h3 className="font-medium">{quoteTitle(quote)}</h3>
+                    <h3 className="font-medium">
+                      {quoteTitle(quote)} <span className="text-mute">mm</span>
+                    </h3>
                     <p className="text-sm text-mute">{quote.material || "Papelão não informado"}</p>
                   </div>
                   <div className="flex gap-3">

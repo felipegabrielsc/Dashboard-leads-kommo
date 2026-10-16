@@ -30,6 +30,18 @@ export function quoteTitle(quote: Pick<Quote, "width" | "depth" | "height" | "no
   return quote.note ? `${base} ${quote.note}` : base;
 }
 
+export function formatCm(millimeters: number): string {
+  const tenths = Math.round(millimeters);
+  const whole = Math.trunc(tenths / 10);
+  const fraction = Math.abs(tenths % 10);
+  const grouped = String(whole).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return fraction ? `${grouped},${fraction}` : grouped;
+}
+
+export function formatMeasuresCm(quote: Pick<Quote, "width" | "depth" | "height">, separator = "×"): string {
+  return `${formatCm(quote.width)} ${separator} ${formatCm(quote.depth)} ${separator} ${formatCm(quote.height)} cm`;
+}
+
 function parsePriceLine(line: string): QuoteTier | null {
   const match = line.match(
     /^(\d{1,3}(?:\.\d{3})+|\d+)\s+caixas?\s*(?:[-–—]\s*)?R\$\s*(\d{1,3}(?:\.\d{3})+,\d{2}|\d+,\d{2})/i,
