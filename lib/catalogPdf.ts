@@ -1,5 +1,7 @@
 import { jsPDF } from "jspdf";
-import { groupQuotes, type Quote } from "./quotes";
+import { formatMeasuresCm, groupQuotes, type Quote } from "./quotes";
+
+export type CatalogKind = "precos" | "medidas";
 
 const ink = [28, 25, 21] as const;
 const mute = [109, 101, 92] as const;
@@ -36,21 +38,30 @@ function inkText(doc: jsPDF, color: readonly [number, number, number]) {
   doc.setTextColor(color[0], color[1], color[2]);
 }
 
-function layoutCard(doc: jsPDF, quote: Quote, width: number): CardLayout {
+function layoutCard(doc: jsPDF, quote: Quote, width: number, showPrices: boolean): CardLayout {
   const inner = width - 8;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
-  const titleLines = doc.splitTextToSize(`${quote.width} x ${quote.depth} x ${quote.height}`, inner) as string[];
+  const titleLines = doc.splitTextToSize(formatMeasuresCm(quote, "x"), inner) as string[];
   doc.setFont("helvetica", "italic");
   doc.setFontSize(8);
   const noteLines = quote.note ? (doc.splitTextToSize(quote.note, inner) as string[]) : [];
   let height = 6 + titleLines.length * TITLE_LEAD;
   if (noteLines.length) height += 1 + noteLines.length * NOTE_LEAD;
-  height += 7 + quote.tiers.length * TIER_LEAD + 2;
+  height += showPrices ? 7 + quote.tiers.length * TIER_LEAD : 3;
   return { height, titleLines, noteLines };
 }
 
-function drawCard(doc: jsPDF, quote: Quote, x: number, y: number, width: number, height: number, layout: CardLayout) {
+function drawCard(
+  doc: jsPDF,
+  quote: Quote,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  layout: CardLayout,
+  showPrices: boolean,
+) {
   fill(doc, card);
   doc.setDrawColor(line[0], line[1], line[2]);
   doc.setLineWidth(0.2);
@@ -72,6 +83,8 @@ function drawCard(doc: jsPDF, quote: Quote, x: number, y: number, width: number,
     cursor += layout.noteLines.length * NOTE_LEAD;
   }
 
+  if (!showPrices) return;
+
   cursor += 2;
   doc.setDrawColor(line[0], line[1], line[2]);
   doc.line(x + 4, cursor, x + width - 4, cursor);
@@ -89,14 +102,19 @@ function drawCard(doc: jsPDF, quote: Quote, x: number, y: number, width: number,
   }
 }
 
-export function catalogFilename(date = new Date()): string {
+export function catalogFilename(date = new Date(), kind: CatalogKind = "precos"): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
-  return `catalogo-caixas-${year}-${month}-${day}.pdf`;
+  const prefix = kind === "medidas" ? "catalogo-medidas" : "catalogo-caixas";
+  return `${prefix}-${year}-${month}-${day}.pdf`;
 }
 
-export function buildCatalogPdf(quotes: Quote[], options?: { filtered?: boolean; generatedAt?: Date }): jsPDF {
+export function buildCatalogPdf(
+  quotes: Quote[],
+  options?: { filtered?: boolean; generatedAt?: Date; kind?: CatalogKind },
+): jsPDF {
+  const showPrices = options?.kind !== "medidas";
   const doc = new jsPDF({ unit: "mm", format: "a4", compress: true });
   const generatedAt = options?.generatedAt ?? new Date();
   const dateLabel = new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" }).format(generatedAt);
@@ -104,7 +122,8 @@ export function buildCatalogPdf(quotes: Quote[], options?: { filtered?: boolean;
   const pageH = doc.internal.pageSize.getHeight();
   const margin = 12;
   const gap = 4;
-  const colW = (pageW - margin * 2 - gap) / 2;
+  const columns = showPrices ? 2 : 3;
+  const colW = (pageW - margin * 2 - gap * (columns - 1)) / columns;
   const bottom = pageH - 16;
   let page = 1;
 
@@ -119,14 +138,12 @@ export function buildCatalogPdf(quotes: Quote[], options?: { filtered?: boolean;
     inkText(doc, cream);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(18);
-    doc.text("Catálogo de caixas", margin, 12);
+    doc.text(showPrices ? "Catálogo de caixas" : "Catálogo de medidas", margin, 12);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
-    doc.text(
-      options?.filtered ? "Recorte da pesquisa · valores unitários por quantidade" : "Valores unitários por quantidade",
-      margin,
-      18,
-    );
+    const detail = showPrices ? "valores unitários por quantidade" : "sem valores";
+    const scope = options?.filtered ? "Recorte da pesquisa · " : "";
+    doc.text(`${scope}Medidas em centímetros · ${detail}`, margin, 18);
     doc.text(dateLabel, margin, 23);
     doc.text(`${quotes.length} ${quotes.length === 1 ? "caixa" : "caixas"}`, pageW - margin, 12, { align: "right" });
     return 36;
@@ -136,7 +153,13 @@ export function buildCatalogPdf(quotes: Quote[], options?: { filtered?: boolean;
     inkText(doc, mute);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
-    doc.text("Para divulgação. O valor é por unidade, conforme a quantidade.", margin, pageH - 8);
+    doc.text(
+      showPrices
+        ? "Medidas em centímetros. O valor é por unidade, conforme a quantidade."
+        : "Medidas em centímetros, sem valores.",
+      margin,
+      pageH - 8,
+    );
     doc.text(String(page), pageW - margin, pageH - 8, { align: "right" });
   }
 
@@ -170,12 +193,10 @@ export function buildCatalogPdf(quotes: Quote[], options?: { filtered?: boolean;
 
   for (const group of groupQuotes(quotes)) {
     let open = false;
-    for (let index = 0; index < group.quotes.length; index += 2) {
-      const left = group.quotes[index];
-      const right = group.quotes[index + 1];
-      const leftLayout = layoutCard(doc, left, colW);
-      const rightLayout = right ? layoutCard(doc, right, colW) : null;
-      const rowH = Math.max(leftLayout.height, rightLayout?.height ?? 0);
+    for (let index = 0; index < group.quotes.length; index += columns) {
+      const slice = group.quotes.slice(index, index + columns);
+      const layouts = slice.map((quote) => layoutCard(doc, quote, colW, showPrices));
+      const rowH = Math.max(...layouts.map((layout) => layout.height));
       const needed = rowH + (open ? 0 : 8);
       if (y + needed > bottom && y > 40) {
         y = nextPage();
@@ -185,8 +206,9 @@ export function buildCatalogPdf(quotes: Quote[], options?: { filtered?: boolean;
         paintGroup(group.material);
         open = true;
       }
-      drawCard(doc, left, margin, y, colW, rowH, leftLayout);
-      if (right && rightLayout) drawCard(doc, right, margin + colW + gap, y, colW, rowH, rightLayout);
+      slice.forEach((quote, column) => {
+        drawCard(doc, quote, margin + column * (colW + gap), y, colW, rowH, layouts[column], showPrices);
+      });
       y += rowH + gap;
     }
     y += 2;
@@ -196,6 +218,6 @@ export function buildCatalogPdf(quotes: Quote[], options?: { filtered?: boolean;
   return doc;
 }
 
-export function downloadCatalogPdf(quotes: Quote[], filtered: boolean) {
-  buildCatalogPdf(quotes, { filtered }).save(catalogFilename());
+export function downloadCatalogPdf(quotes: Quote[], filtered: boolean, kind: CatalogKind = "precos") {
+  buildCatalogPdf(quotes, { filtered, kind }).save(catalogFilename(new Date(), kind));
 }
