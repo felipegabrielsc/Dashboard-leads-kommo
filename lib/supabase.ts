@@ -53,6 +53,9 @@ export function explainQuotesError(error: unknown): string {
   if (/catalog_profile/i.test(message)) {
     return "O nome do catálogo ainda não está no banco. Execute supabase/catalogo-identidade.sql no SQL Editor.";
   }
+  if (/family/i.test(message) && /column|schema cache|does not exist/i.test(message)) {
+    return "O corte e vinco ainda não está no banco. Execute supabase/corte-vinco.sql no SQL Editor.";
+  }
   if (/quotes|relation|schema cache|does not exist|permission denied|row-level security|42501/i.test(message)) {
     return "Os orçamentos ainda não estão no banco. Execute supabase/orcamentos.sql no SQL Editor.";
   }

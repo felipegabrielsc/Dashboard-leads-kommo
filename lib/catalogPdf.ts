@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
 import { formatDate, formatPhone } from "./format";
-import { formatMeasuresCm, groupQuotes, type Quote } from "./quotes";
+import { displayNote, formatMeasuresCm, groupQuotes, tierQuantityLabel, type Quote } from "./quotes";
 import { emptyCatalogIdentity, type CatalogIdentity } from "./types";
 
 export type { CatalogIdentity };
@@ -13,6 +13,7 @@ const paper = [243, 239, 230] as const;
 const card = [255, 253, 248] as const;
 const line = [228, 220, 207] as const;
 const pine = [27, 107, 67] as const;
+const brass = [138, 90, 18] as const;
 const cream = [243, 239, 230] as const;
 
 const TITLE_LEAD = 5.2;
@@ -49,10 +50,18 @@ function layoutCard(doc: jsPDF, quote: Quote, width: number, showPrices: boolean
   const titleLines = doc.splitTextToSize(formatMeasuresCm(quote, "x"), inner) as string[];
   doc.setFont("helvetica", "italic");
   doc.setFontSize(8);
-  const noteLines = quote.note ? (doc.splitTextToSize(quote.note, inner) as string[]) : [];
-  let height = 6 + titleLines.length * TITLE_LEAD;
+  const note = displayNote(quote);
+  const noteLines = note ? (doc.splitTextToSize(note, inner) as string[]) : [];
+  const badge = quote.family === "corte_vinco" ? 4.2 : 0;
+  let height = 6 + badge + titleLines.length * TITLE_LEAD;
   if (noteLines.length) height += 1 + noteLines.length * NOTE_LEAD;
-  height += showPrices ? 7 + quote.tiers.length * TIER_LEAD : 3;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  const tierInner = Math.max(24, inner - (showPrices ? 24 : 0));
+  const tierLineCount = showPrices
+    ? quote.tiers.reduce((total, tier) => total + (doc.splitTextToSize(tierQuantityLabel(tier), tierInner) as string[]).length, 0)
+    : 0;
+  height += showPrices ? 7 + tierLineCount * TIER_LEAD : 3;
   return { height, titleLines, noteLines };
 }
 
@@ -71,7 +80,14 @@ function drawCard(
   doc.setLineWidth(0.2);
   doc.roundedRect(x, y, width, height, 2, 2, "FD");
 
-  let cursor = y + 6;
+  let cursor = y + 5.5;
+  if (quote.family === "corte_vinco") {
+    inkText(doc, brass);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.5);
+    doc.text("CORTE E VINCO", x + 4, cursor);
+    cursor += 4.2;
+  }
   inkText(doc, ink);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
@@ -94,15 +110,17 @@ function drawCard(
   doc.line(x + 4, cursor, x + width - 4, cursor);
   cursor += 4.5;
 
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  const tierInner = Math.max(24, width - 8 - 24);
   for (const tier of quote.tiers) {
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
+    const lines = doc.splitTextToSize(tierQuantityLabel(tier), tierInner) as string[];
     inkText(doc, mute);
-    doc.text(`${pdfInt(tier.quantity)} un.`, x + 4, cursor);
+    doc.text(lines, x + 4, cursor);
     doc.setFont("helvetica", "bold");
     inkText(doc, ink);
     doc.text(pdfMoney(tier.unitPrice), x + width - 4, cursor, { align: "right" });
-    cursor += TIER_LEAD;
+    cursor += lines.length * TIER_LEAD;
   }
 }
 
@@ -170,7 +188,10 @@ export function buildCatalogPdf(
     cursor += 6;
     const detail = showPrices ? "valores unitários por quantidade" : "sem valores";
     const scope = options?.filtered ? "Recorte da pesquisa · " : "";
-    doc.text(`${scope}Medidas em centímetros · ${detail}`, margin, cursor);
+    const hasDieCut = quotes.some((quote) => quote.family === "corte_vinco");
+    const hasCommon = quotes.some((quote) => quote.family !== "corte_vinco");
+    const mix = hasDieCut && hasCommon ? " · corte e vinco separado" : hasDieCut ? " · corte e vinco" : "";
+    doc.text(`${scope}Medidas em centímetros · ${detail}${mix}`, margin, cursor);
     cursor += 5;
     if (contact) {
       doc.text(contact, margin, cursor);
@@ -214,8 +235,8 @@ export function buildCatalogPdf(
     return doc;
   }
 
-  function paintGroup(label: string) {
-    inkText(doc, pine);
+  function paintGroup(label: string, dieCut: boolean) {
+    inkText(doc, dieCut ? brass : pine);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
     doc.text(label, margin, y + 4);
@@ -234,7 +255,7 @@ export function buildCatalogPdf(
         open = false;
       }
       if (!open) {
-        paintGroup(group.material);
+        paintGroup(group.label, group.family === "corte_vinco");
         open = true;
       }
       slice.forEach((quote, column) => {

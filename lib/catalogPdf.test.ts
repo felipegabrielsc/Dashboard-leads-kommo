@@ -25,4 +25,11 @@ assert.ok(measures.getNumberOfPages() >= 1);
 assert.ok(measures.getNumberOfPages() < full.getNumberOfPages());
 assert.equal(Buffer.from(measures.output("arraybuffer")).subarray(0, 5).toString(), "%PDF-");
 
-console.log("catalog pdf ok", full.getNumberOfPages(), measures.getNumberOfPages());
+const dieCut = buildCatalogPdf(
+  parseQuotes(readFileSync(new URL("../data/medidas-corte-vinco.txt", import.meta.url), "utf8")),
+  { generatedAt },
+);
+assert.ok(dieCut.getNumberOfPages() >= 1);
+assert.equal(Buffer.from(dieCut.output("arraybuffer")).subarray(0, 5).toString(), "%PDF-");
+
+console.log("catalog pdf ok", full.getNumberOfPages(), measures.getNumberOfPages(), dieCut.getNumberOfPages());

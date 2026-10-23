@@ -8,6 +8,7 @@ create table if not exists public.quotes (
   height integer not null check (height > 0),
   material text not null default '',
   note text not null default '',
+  family text not null default 'padrao' check (family in ('padrao', 'corte_vinco')),
   tiers jsonb not null default '[]'::jsonb,
   updated_at timestamptz not null default now()
 );

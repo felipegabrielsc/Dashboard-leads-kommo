@@ -307,8 +307,14 @@ type QuoteRow = {
   height: number;
   material: string;
   note: string;
+  family: string | null;
   tiers: QuoteTier[] | null;
 };
+
+function asFamily(value: string | null, note: string): Quote["family"] {
+  if (value === "corte_vinco" || value === "padrao") return value;
+  return /vinco/i.test(note) ? "corte_vinco" : "padrao";
+}
 
 function asTiers(value: QuoteTier[] | null): QuoteTier[] {
   if (!Array.isArray(value)) return [];
@@ -316,14 +322,15 @@ function asTiers(value: QuoteTier[] | null): QuoteTier[] {
     const quantity = Number(tier?.quantity);
     const unitPrice = Number(tier?.unitPrice);
     if (!quantity || !Number.isFinite(unitPrice)) return [];
-    return [{ quantity, unitPrice }];
+    const detail = typeof tier?.detail === "string" ? tier.detail.trim() : "";
+    return [detail ? { quantity, unitPrice, detail } : { quantity, unitPrice }];
   });
 }
 
 export async function fetchQuotes(client: SupabaseClient): Promise<Quote[]> {
   const { data, error } = await client
     .from("quotes")
-    .select("id,width,depth,height,material,note,tiers")
+    .select("id,width,depth,height,material,note,family,tiers")
     .order("width");
   throwIf(error);
   return ((data || []) as QuoteRow[]).map((row) => ({
@@ -333,6 +340,7 @@ export async function fetchQuotes(client: SupabaseClient): Promise<Quote[]> {
     height: row.height,
     material: row.material || "",
     note: row.note || "",
+    family: asFamily(row.family, row.note || ""),
     tiers: asTiers(row.tiers),
   }));
 }
@@ -349,6 +357,7 @@ export async function upsertQuotes(client: SupabaseClient, quotes: Quote[]) {
           height: quote.height,
           material: quote.material,
           note: quote.note,
+          family: quote.family === "corte_vinco" ? "corte_vinco" : "padrao",
           tiers: quote.tiers,
           updated_at: new Date().toISOString(),
         })),
