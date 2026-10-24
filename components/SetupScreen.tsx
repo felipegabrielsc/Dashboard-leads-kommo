@@ -15,6 +15,7 @@ export function SetupScreen() {
         <li>Se o SQL antigo já rodou, execute também supabase/leitura-publica.sql para liberar a consulta sem login.</li>
         <li>No mesmo caso, execute supabase/historico-e-telefones.sql para gravar o histórico e esconder o telefone de quem não entrou.</li>
         <li>Execute supabase/orcamentos.sql para o botão Orçamentos poder salvar as caixas importadas do txt.</li>
+        <li>Execute supabase/catalogo-identidade.sql para o PDF guardar o nome e o WhatsApp, e para o histórico esconder o e-mail de quem não entrou.</li>
       </ol>
     </main>
   );

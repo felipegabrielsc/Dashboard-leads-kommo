@@ -12,7 +12,9 @@ O painel compara o período escolhido com o intervalo anterior da mesma duraçã
 
 Quem está logado também abre o botão Orçamentos: pesquisa caixas pela medida, cadastra uma medida na mão e importa um txt com quantidade e valor unitário. O catálogo dessa pesquisa baixa em PDF para divulgar.
 
-Se o `schema.sql` antigo já foi executado, rode `supabase/leitura-publica.sql`, `supabase/historico-e-telefones.sql` e `supabase/orcamentos.sql` no SQL Editor.
+O histórico mostra o e-mail de quem alterou só para quem está logado. O visitante vê “equipe”.
+
+Se o `schema.sql` antigo já foi executado, rode `supabase/leitura-publica.sql`, `supabase/historico-e-telefones.sql`, `supabase/orcamentos.sql` e `supabase/catalogo-identidade.sql` no SQL Editor.
 
 ## Rodar localmente
 

@@ -17,15 +17,19 @@ import {
 export function QuotesPanel({
   quotes,
   error,
+  profile,
   onClose,
   onImport,
   onDelete,
+  onSaveProfile,
 }: {
   quotes: Quote[];
   error: string;
+  profile: CatalogIdentity;
   onClose: () => void;
   onImport: (quotes: Quote[]) => void;
   onDelete: (id: string) => void;
+  onSaveProfile: (profile: CatalogIdentity) => void;
 }) {
   const [query, setQuery] = useState("");
   const [material, setMaterial] = useState("");
@@ -140,12 +144,53 @@ export function QuotesPanel({
         </div>
 
         <div className="space-y-3 border-b border-line px-5 py-4">
+          <form
+            className="grid gap-3 sm:grid-cols-[1fr_1fr_170px_auto] sm:items-end"
+            onSubmit={(event) => {
+              event.preventDefault();
+              onSaveProfile(identity);
+              setNotice("Nome, WhatsApp e validade entram nos dois PDFs.");
+              setLocalError("");
+            }}
+          >
+            <label className="block text-sm">
+              Nome no PDF
+              <input
+                className="field mt-1"
+                placeholder="Nome da casa"
+                value={identity.companyName}
+                onChange={(event) => setIdentity({ ...identity, companyName: event.target.value })}
+              />
+            </label>
+            <label className="block text-sm">
+              WhatsApp
+              <input
+                className="field mt-1"
+                inputMode="tel"
+                placeholder="5511999999999"
+                value={identity.whatsapp}
+                onChange={(event) => setIdentity({ ...identity, whatsapp: event.target.value })}
+              />
+            </label>
+            <label className="block text-sm">
+              Válido até
+              <input
+                className="field mt-1"
+                type="date"
+                value={identity.validUntil}
+                onChange={(event) => setIdentity({ ...identity, validUntil: event.target.value })}
+              />
+            </label>
+            <button type="submit" className="btn">
+              Salvar no PDF
+            </button>
+          </form>
           <label className="block text-sm">
             Pesquisar
             <input
               autoFocus
               className="field mt-1"
-              placeholder="220 x 220 x 160, onda B, divisória"
+              placeholder="22 x 22 x 16 ou 220 x 220 x 160, onda B"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
@@ -221,7 +266,9 @@ export function QuotesPanel({
               <article key={quote.id} className="rounded-2xl border border-line bg-paper p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h3 className="font-medium">{quoteTitle(quote)}</h3>
+                    <h3 className="font-medium">
+                      {quoteTitle(quote)} <span className="text-mute">mm</span>
+                    </h3>
                     <p className="text-sm text-mute">{quote.material || "Papelão não informado"}</p>
                   </div>
                   <div className="flex gap-3">

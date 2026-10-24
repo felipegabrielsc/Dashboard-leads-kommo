@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { normalizeState } from "./normalize";
 import type { Quote, QuoteTier } from "./quotes";
+import type { CatalogIdentity } from "./types";
 import type { AnalysisLead, Category, ChangeEntry, DayRecord, LeadState } from "./types";
 
 type CategoryRow = {
@@ -34,7 +35,7 @@ type AnalysisRow = {
 type ChangeRow = {
   id: string;
   created_at: string;
-  actor: string;
+  actor?: string;
   kind: string;
   day: string | null;
   category_id: string | null;
@@ -276,7 +277,7 @@ function mapChange(row: ChangeRow): ChangeEntry {
   return {
     id: row.id,
     createdAt: row.created_at,
-    actor: row.actor,
+    actor: row.actor || "equipe",
     kind: row.kind,
     day: isoDay(row.day),
     categoryId: row.category_id || "",
@@ -285,13 +286,18 @@ function mapChange(row: ChangeRow): ChangeEntry {
 }
 
 export async function fetchChanges(client: SupabaseClient): Promise<ChangeEntry[]> {
-  const { data, error } = await client
-    .from("change_log")
-    .select("id,created_at,actor,kind,day,category_id,summary")
-    .order("created_at", { ascending: false })
-    .limit(200);
+  const { data: sessionData } = await client.auth.getSession();
+  const signedIn = Boolean(sessionData.session);
+  const query = client.from("change_log").select(
+    signedIn
+      ? "id,created_at,actor,kind,day,category_id,summary"
+      : "id,created_at,kind,day,category_id,summary",
+  );
+  const { data, error } = await query.order("created_at", { ascending: false }).limit(200);
   throwIf(error);
-  return ((data || []) as ChangeRow[]).map(mapChange);
+  return ((data || []) as unknown as ChangeRow[]).map((row) =>
+    mapChange({ ...row, actor: signedIn ? row.actor || "equipe" : "equipe" }),
+  );
 }
 
 type QuoteRow = {
@@ -353,6 +359,40 @@ export async function upsertQuotes(client: SupabaseClient, quotes: Quote[]) {
 
 export async function deleteQuote(client: SupabaseClient, id: string) {
   throwIf((await client.from("quotes").delete().eq("id", id)).error);
+}
+
+type CatalogProfileRow = {
+  company_name: string;
+  whatsapp: string;
+  valid_until: string | null;
+};
+
+export async function fetchCatalogProfile(client: SupabaseClient): Promise<CatalogIdentity> {
+  const { data, error } = await client
+    .from("catalog_profile")
+    .select("company_name,whatsapp,valid_until")
+    .eq("id", "padrao")
+    .maybeSingle();
+  throwIf(error);
+  const row = data as CatalogProfileRow | null;
+  return {
+    companyName: row?.company_name || "",
+    whatsapp: row?.whatsapp || "",
+    validUntil: row?.valid_until || "",
+  };
+}
+
+export async function saveCatalogProfile(client: SupabaseClient, profile: CatalogIdentity) {
+  throwIf(
+    (
+      await client.from("catalog_profile").upsert({
+        id: "padrao",
+        company_name: profile.companyName.trim(),
+        whatsapp: profile.whatsapp.trim(),
+        valid_until: profile.validUntil || null,
+      })
+    ).error,
+  );
 }
 
 export async function recordChange(
