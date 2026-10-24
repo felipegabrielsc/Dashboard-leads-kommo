@@ -47,7 +47,9 @@ export function QuoteForm({
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="font-serif text-2xl">{title}</h3>
-          <p className="mt-1 text-sm text-mute">As três medidas entram na ordem do anúncio, como 220 x 220 x 160.</p>
+          <p className="mt-1 text-sm text-mute">
+            As três medidas entram em milímetros. Corte e vinco sai numa seção própria do catálogo, separado das caixas comuns.
+          </p>
         </div>
         <button type="button" className="text-sm text-mute underline-offset-2 hover:underline" onClick={onCancel}>
           Cancelar
@@ -88,7 +90,18 @@ export function QuoteForm({
         </label>
       </div>
 
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+      <div className="mt-3 grid gap-3 sm:grid-cols-3">
+        <label className="text-sm">
+          Tipo
+          <select
+            className="field mt-1"
+            value={draft.family}
+            onChange={(event) => patch({ family: event.target.value === "corte_vinco" ? "corte_vinco" : "padrao" })}
+          >
+            <option value="padrao">Caixa comum</option>
+            <option value="corte_vinco">Corte e vinco</option>
+          </select>
+        </label>
         <label className="text-sm">
           Papelão
           <input
@@ -108,7 +121,7 @@ export function QuoteForm({
           Detalhe
           <input
             className="field mt-1"
-            placeholder="corte e vinco, divisória"
+            placeholder="divisória, para montar"
             value={draft.note}
             onChange={(event) => patch({ note: event.target.value })}
           />

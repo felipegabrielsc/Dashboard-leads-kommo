@@ -464,11 +464,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           await upsertQuotes(client, incoming);
           setQuotesError("");
           const only = incoming.length === 1 ? incoming[0] : null;
+          const dieCut = incoming.filter((quote) => quote.family === "corte_vinco").length;
           await writeChange(client, {
             kind: "orcamento",
             summary: only
-              ? `${added ? "Cadastrou" : "Atualizou"} a caixa ${only.width} x ${only.depth} x ${only.height}${only.material ? `, ${only.material}` : ""}.`
-              : `Importou ${incoming.length} orçamentos de caixas, ${added} novos.`,
+              ? `${added ? "Cadastrou" : "Atualizou"} a caixa ${only.width} x ${only.depth} x ${only.height}${only.family === "corte_vinco" ? ", corte e vinco" : ""}${only.material ? `, ${only.material}` : ""}.`
+              : `Importou ${incoming.length} orçamentos de caixas${dieCut ? `, ${dieCut} de corte e vinco` : ""}, ${added} novos.`,
           });
         } catch (error) {
           setQuotesError(explainQuotesError(error));

@@ -7,12 +7,16 @@ import { formatBrl, formatInt } from "@/lib/format";
 import {
   draftFromQuote,
   emptyQuoteDraft,
+  familyLabel,
   mergeQuotes,
   parseQuotes,
   quoteTitle,
   searchQuotes,
+  tierQuantityLabel,
   type Quote,
+  type QuoteFamily,
 } from "@/lib/quotes";
+import type { CatalogIdentity } from "@/lib/types";
 
 export function QuotesPanel({
   quotes,
@@ -33,19 +37,27 @@ export function QuotesPanel({
 }) {
   const [query, setQuery] = useState("");
   const [material, setMaterial] = useState("");
+  const [family, setFamily] = useState<"" | QuoteFamily>("");
   const [notice, setNotice] = useState("");
   const [localError, setLocalError] = useState("");
   const [view, setView] = useState<"lista" | "catalogo">("lista");
+  const [catalogPrices, setCatalogPrices] = useState(true);
   const [form, setForm] = useState<{ title: string; initialId: string; draft: ReturnType<typeof emptyQuoteDraft> } | null>(
     null,
   );
+  const [identity, setIdentity] = useState(profile);
   const fileRef = useRef<HTMLInputElement>(null);
   const materials = useMemo(() => {
     const names = new Set(quotes.map((quote) => quote.material).filter(Boolean));
     return [...names].sort((a, b) => a.localeCompare(b, "pt-BR"));
   }, [quotes]);
-  const visible = useMemo(() => searchQuotes(quotes, query, material), [material, query, quotes]);
-  const filtered = query.trim() !== "" || material !== "";
+  const visible = useMemo(() => searchQuotes(quotes, query, material, family), [family, material, query, quotes]);
+  const filtered = query.trim() !== "" || material !== "" || family !== "";
+  const dieCutCount = quotes.filter((quote) => quote.family === "corte_vinco").length;
+
+  useEffect(() => {
+    setIdentity(profile);
+  }, [profile]);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -63,20 +75,28 @@ export function QuotesPanel({
     const text = await file.text();
     const parsed = parseQuotes(text);
     if (!parsed.length) {
-      setLocalError("Não encontrei caixas nesse texto. Cada bloco começa com Caixa, as medidas e o valor.");
+      setLocalError("Não encontrei caixas nesse texto. Cada bloco começa com Caixa ou só com as três medidas, e o valor.");
       return;
     }
     const { added, updated } = mergeQuotes(quotes, parsed);
     onImport(parsed);
+    const dieCut = parsed.filter((quote) => quote.family === "corte_vinco").length;
+    const common = parsed.length - dieCut;
+    const kind =
+      dieCut && common
+        ? `${formatInt(common)} caixas comuns e ${formatInt(dieCut)} de corte e vinco`
+        : dieCut
+          ? `${formatInt(dieCut)} de corte e vinco`
+          : `${formatInt(parsed.length)} caixas comuns`;
     setNotice(
-      `${formatInt(parsed.length)} no arquivo: ${formatInt(added)} novos e ${formatInt(updated)} com a medida já salva, que ficaram com o preço novo.`,
+      `${formatInt(parsed.length)} no arquivo (${kind}): ${formatInt(added)} novos e ${formatInt(updated)} com a medida já salva, que ficaram com o preço novo.`,
     );
   }
 
-  async function downloadPdf() {
+  async function downloadPdf(kind: "precos" | "medidas") {
     setLocalError("");
     const { downloadCatalogPdf } = await import("@/lib/catalogPdf");
-    downloadCatalogPdf(visible, filtered);
+    downloadCatalogPdf(visible, filtered, kind, identity);
   }
 
   function saveManual(quote: Quote) {
@@ -104,7 +124,7 @@ export function QuotesPanel({
               Orçamentos
             </h2>
             <p className="mt-1 max-w-xl text-sm text-mute">
-              Pesquise, cadastre uma medida ou importe o txt. O catálogo baixa em PDF o que estiver nesta pesquisa.
+              Pesquise e cadastre em milímetros. O catálogo sai em centímetros. Corte e vinco fica separado das caixas comuns, no mesmo PDF.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -122,9 +142,17 @@ export function QuotesPanel({
               type="button"
               className="btn disabled:cursor-not-allowed disabled:opacity-40"
               disabled={!visible.length}
-              onClick={() => void downloadPdf()}
+              onClick={() => void downloadPdf("precos")}
             >
-              Baixar PDF
+              PDF com preços
+            </button>
+            <button
+              type="button"
+              className="btn disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={!visible.length}
+              onClick={() => void downloadPdf("medidas")}
+            >
+              PDF só medidas
             </button>
             <button type="button" className="btn" onClick={onClose}>
               Fechar
@@ -190,11 +218,30 @@ export function QuotesPanel({
             <input
               autoFocus
               className="field mt-1"
-              placeholder="22 x 22 x 16 ou 220 x 220 x 160, onda B"
+              placeholder="22 x 22 x 16, onda B ou corte e vinco"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
           </label>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className={`chip ${family === "" ? "chip-on" : ""}`} onClick={() => setFamily("")}>
+              Todos os tipos
+            </button>
+            <button
+              type="button"
+              className={`chip ${family === "padrao" ? "chip-on" : ""}`}
+              onClick={() => setFamily(family === "padrao" ? "" : "padrao")}
+            >
+              Caixas comuns
+            </button>
+            <button
+              type="button"
+              className={`chip ${family === "corte_vinco" ? "chip-on" : ""}`}
+              onClick={() => setFamily(family === "corte_vinco" ? "" : "corte_vinco")}
+            >
+              Corte e vinco{dieCutCount ? ` (${formatInt(dieCutCount)})` : ""}
+            </button>
+          </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" className={`chip ${material === "" ? "chip-on" : ""}`} onClick={() => setMaterial("")}>
               Todos os papéis
@@ -259,57 +306,75 @@ export function QuotesPanel({
             <p className="text-sm text-mute">Nenhuma caixa com essa medida ou esse papelão.</p>
           )}
           {view === "catalogo" ? (
-            <QuoteCatalog quotes={visible} filtered={filtered} />
+            <QuoteCatalog quotes={visible} filtered={filtered} prices={catalogPrices} onPrices={setCatalogPrices} />
           ) : (
-          <div className="grid gap-3 md:grid-cols-2">
-            {visible.map((quote) => (
-              <article key={quote.id} className="rounded-2xl border border-line bg-paper p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="font-medium">
-                      {quoteTitle(quote)} <span className="text-mute">mm</span>
-                    </h3>
-                    <p className="text-sm text-mute">{quote.material || "Papelão não informado"}</p>
-                  </div>
-                  <div className="flex gap-3">
-                    <button
-                      type="button"
-                      className="text-sm text-mute underline-offset-2 hover:underline"
-                      onClick={() =>
-                        setForm({ title: "Editar medida", initialId: quote.id, draft: draftFromQuote(quote) })
-                      }
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      className="text-sm text-mute underline-offset-2 hover:underline"
-                      onClick={() => {
-                        if (window.confirm(`Remover ${quoteTitle(quote)}?`)) onDelete(quote.id);
-                      }}
-                    >
-                      Remover
-                    </button>
-                  </div>
-                </div>
-                <table className="mt-3 w-full text-sm">
-                  <thead className="text-left text-xs uppercase tracking-wide text-mute">
-                    <tr>
-                      <th className="py-1 font-medium">Quantidade</th>
-                      <th className="py-1 font-medium">Valor unitário</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {quote.tiers.map((tier) => (
-                      <tr key={tier.quantity} className="border-t border-line">
-                        <td className="py-1.5">{formatInt(tier.quantity)} caixas</td>
-                        <td className="py-1.5 font-medium">{formatBrl(tier.unitPrice)}</td>
-                      </tr>
+          <div className="space-y-6">
+            {(["padrao", "corte_vinco"] as const).map((section) => {
+              const items = visible.filter((quote) => (quote.family === "corte_vinco" ? "corte_vinco" : "padrao") === section);
+              if (!items.length) return null;
+              return (
+                <section key={section}>
+                  <h3 className={`font-serif text-2xl ${section === "corte_vinco" ? "text-brass" : "text-pine"}`}>
+                    {familyLabel(section)}
+                  </h3>
+                  <div className="mt-3 grid gap-3 md:grid-cols-2">
+                    {items.map((quote) => (
+                      <article key={quote.id} className="rounded-2xl border border-line bg-paper p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            {quote.family === "corte_vinco" && (
+                              <p className="mb-1 inline-flex rounded-full bg-brassSoft px-2 py-0.5 text-xs font-medium text-brass">
+                                Corte e vinco
+                              </p>
+                            )}
+                            <h3 className="font-medium">
+                              {quoteTitle(quote)} <span className="text-mute">mm</span>
+                            </h3>
+                            <p className="text-sm text-mute">{quote.material || "Papelão não informado"}</p>
+                          </div>
+                          <div className="flex gap-3">
+                            <button
+                              type="button"
+                              className="text-sm text-mute underline-offset-2 hover:underline"
+                              onClick={() =>
+                                setForm({ title: "Editar medida", initialId: quote.id, draft: draftFromQuote(quote) })
+                              }
+                            >
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              className="text-sm text-mute underline-offset-2 hover:underline"
+                              onClick={() => {
+                                if (window.confirm(`Remover ${quoteTitle(quote)}?`)) onDelete(quote.id);
+                              }}
+                            >
+                              Remover
+                            </button>
+                          </div>
+                        </div>
+                        <table className="mt-3 w-full text-sm">
+                          <thead className="text-left text-xs uppercase tracking-wide text-mute">
+                            <tr>
+                              <th className="py-1 font-medium">Quantidade</th>
+                              <th className="py-1 font-medium">Valor unitário</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {quote.tiers.map((tier) => (
+                              <tr key={`${tier.quantity}-${tier.detail || ""}`} className="border-t border-line">
+                                <td className="py-1.5">{tierQuantityLabel(tier, "caixas")}</td>
+                                <td className="py-1.5 font-medium">{formatBrl(tier.unitPrice)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </article>
                     ))}
-                  </tbody>
-                </table>
-              </article>
-            ))}
+                  </div>
+                </section>
+              );
+            })}
           </div>
           )}
         </div>

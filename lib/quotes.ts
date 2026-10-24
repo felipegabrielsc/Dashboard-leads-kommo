@@ -1,8 +1,11 @@
 import { normalizeLabel, slugify } from "./categories";
 
+export type QuoteFamily = "padrao" | "corte_vinco";
+
 export type QuoteTier = {
   quantity: number;
   unitPrice: number;
+  detail?: string;
 };
 
 export type Quote = {
@@ -12,22 +15,59 @@ export type Quote = {
   height: number;
   material: string;
   note: string;
+  family: QuoteFamily;
   tiers: QuoteTier[];
 };
 
 const DIMENSIONS = /(\d+)\s*x\s*(\d+)\s*x\s*(\d+)/i;
+const BARE_DIMENSIONS = /^(\d+)\s*x\s*(\d+)\s*x\s*(\d+)\s*$/i;
+const QTY = String.raw`(\d{1,3}(?:\.\d{3})+|\d+)`;
+const MONEY = String.raw`(\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2})`;
 
-export function quoteKey(quote: Pick<Quote, "width" | "depth" | "height" | "material" | "note">): string {
-  return `${quote.width}x${quote.depth}x${quote.height}|${normalizeLabel(quote.material)}|${normalizeLabel(quote.note)}`;
+type QuoteIdentity = Pick<Quote, "width" | "depth" | "height" | "material" | "note"> & {
+  family?: QuoteFamily;
+};
+
+export function quoteKey(quote: QuoteIdentity): string {
+  const note = normalizeLabel(quote.note);
+  const base = `${quote.width}x${quote.depth}x${quote.height}|${normalizeLabel(quote.material)}|${note}`;
+  if (quote.family === "corte_vinco" && !note.includes("vinco")) return `${base}|corte_vinco`;
+  return base;
 }
 
-export function quoteId(quote: Pick<Quote, "width" | "depth" | "height" | "material" | "note">): string {
+export function quoteId(quote: QuoteIdentity): string {
   return slugify(quoteKey(quote).replace(/\|/g, " "));
 }
 
-export function quoteTitle(quote: Pick<Quote, "width" | "depth" | "height" | "note">): string {
+export function familyLabel(family: QuoteFamily | undefined): string {
+  return family === "corte_vinco" ? "Corte e vinco" : "Caixas comuns";
+}
+
+export function displayNote(quote: Pick<Quote, "note" | "family">): string {
+  const note = quote.note.trim();
+  if (quote.family !== "corte_vinco") return note;
+  return note
+    .replace(/corte\s+e\s+vinco/gi, "")
+    .replace(/corte\s+vinco/gi, "")
+    .replace(/[()]/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/^[-–—\s]+|[-–—\s]+$/g, "")
+    .trim();
+}
+
+export function quoteTitle(quote: Pick<Quote, "width" | "depth" | "height" | "note" | "family">): string {
   const base = `Caixa ${quote.width} × ${quote.depth} × ${quote.height}`;
-  return quote.note ? `${base} ${quote.note}` : base;
+  const note = displayNote(quote);
+  return note ? `${base} ${note}` : base;
+}
+
+export function tierQuantityLabel(tier: QuoteTier, noun = "un."): string {
+  if (tier.quantity === 1 && tier.detail === "a unidade") return "a unidade";
+  const amount = Math.round(tier.quantity)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  const base = `${amount} ${noun}`.trim();
+  return tier.detail ? `${base} · ${tier.detail}` : base;
 }
 
 export function formatCm(millimeters: number): string {
@@ -42,22 +82,69 @@ export function formatMeasuresCm(quote: Pick<Quote, "width" | "depth" | "height"
   return `${formatCm(quote.width)} ${separator} ${formatCm(quote.depth)} ${separator} ${formatCm(quote.height)} cm`;
 }
 
-function parsePriceLine(line: string): QuoteTier | null {
-  const match = line.match(
-    /^(\d{1,3}(?:\.\d{3})+|\d+)\s+caixas?\s*(?:[-–—]\s*)?R\$\s*(\d{1,3}(?:\.\d{3})+,\d{2}|\d+,\d{2})/i,
+function readMoney(raw: string): number {
+  return Number(raw.replaceAll(".", "").replace(",", "."));
+}
+
+function parseQuantity(raw: string): number {
+  return Number(raw.replaceAll(".", ""));
+}
+
+function detailFrom(line: string): string {
+  return [...line.matchAll(/\(([^)]+)\)/g)]
+    .map((item) => item[1].trim())
+    .filter(Boolean)
+    .join(", ");
+}
+
+type ParsedPrice = { kind: "tier"; tier: QuoteTier } | { kind: "fixed"; unitPrice: number };
+
+function parsePriceLine(line: string): ParsedPrice | null {
+  const fixed = line.match(new RegExp(`^${MONEY}\\s+fixo\\b`, "i"));
+  if (fixed) {
+    const unitPrice = readMoney(fixed[1]);
+    return Number.isFinite(unitPrice) ? { kind: "fixed", unitPrice } : null;
+  }
+
+  const unitOnly = line.match(new RegExp(`^R\\$\\s*${MONEY}\\s+a\\s+unidade\\b`, "i"));
+  if (unitOnly) {
+    const unitPrice = readMoney(unitOnly[1]);
+    if (!Number.isFinite(unitPrice)) return null;
+    return { kind: "tier", tier: { quantity: 1, unitPrice, detail: "a unidade" } };
+  }
+
+  const withQty = line.match(
+    new RegExp(`^${QTY}\\s*(?:caixas?\\s*)?(?:[-–—]\\s*)?(?:R\\$\\s*)?${MONEY}\\b`, "i"),
   );
-  if (!match) return null;
-  const quantity = Number(match[1].replaceAll(".", ""));
-  const unitPrice = Number(match[2].replaceAll(".", "").replace(",", "."));
+  if (!withQty || !/caixas?\b|R\$|[-–—]/i.test(line)) return null;
+  const quantity = parseQuantity(withQty[1]);
+  const unitPrice = readMoney(withQty[2]);
   if (!quantity || !Number.isFinite(unitPrice)) return null;
-  return { quantity, unitPrice };
+  const detail = detailFrom(line);
+  return { kind: "tier", tier: detail ? { quantity, unitPrice, detail } : { quantity, unitPrice } };
+}
+
+function takeTrailingTier(text: string): { rest: string; tier: QuoteTier | null } {
+  const match = text.match(
+    /(?:^|\s)[-–—]?\s*R\$\s*(\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2})\s+a\s+unidade\b\.?\s*$/i,
+  );
+  if (!match || match.index == null) return { rest: text, tier: null };
+  const unitPrice = readMoney(match[1]);
+  if (!Number.isFinite(unitPrice)) return { rest: text, tier: null };
+  return { rest: text.slice(0, match.index), tier: { quantity: 1, unitPrice, detail: "a unidade" } };
 }
 
 function splitExtra(before: string, after: string): { material: string; note: string } {
   const material: string[] = [];
   const note: string[] = [];
   for (const part of [before, after]) {
-    const text = part.replace(/\s+/g, " ").trim().replace(/^[-–—]\s*/, "").replace(/\.$/, "").trim();
+    const text = part
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/^[-–—]\s*/, "")
+      .replace(/\s*[-–—]\s*$/, "")
+      .replace(/\.$/, "")
+      .trim();
     if (!text) continue;
     if (/papel[aã]o/i.test(text)) material.push(text);
     else note.push(text);
@@ -65,51 +152,166 @@ function splitExtra(before: string, after: string): { material: string; note: st
   return { material: material.join(" "), note: note.join(" ") };
 }
 
-export function parseQuotes(text: string): Quote[] {
+type RawQuote = {
+  width: number;
+  depth: number;
+  height: number;
+  material: string;
+  note: string;
+  tiers: QuoteTier[];
+  header: string;
+  headerKind: "caixa" | "bare";
+  mentionedVinco: boolean;
+  pendingPrice: number | null;
+};
+
+function blankRaw(
+  width: number,
+  depth: number,
+  height: number,
+  header: string,
+  headerKind: "caixa" | "bare",
+  material: string,
+  note: string,
+  tier: QuoteTier | null,
+): RawQuote {
+  return {
+    width,
+    depth,
+    height,
+    material,
+    note,
+    tiers: tier ? [tier] : [],
+    header,
+    headerKind,
+    mentionedVinco: /vinco/i.test(header),
+    pendingPrice: null,
+  };
+}
+
+function measuresFor(raw: RawQuote, family: QuoteFamily): { width: number; depth: number; height: number } {
+  const width = raw.width;
+  const depth = raw.depth;
+  const height = raw.height;
+  if (family !== "corte_vinco" || /\bmm\b|mil[ií]met/i.test(raw.header)) return { width, depth, height };
+  if (/\bcm\b|cent[ií]met/i.test(raw.header) || Math.max(width, depth, height) < 100) {
+    return { width: width * 10, depth: depth * 10, height: height * 10 };
+  }
+  return { width, depth, height };
+}
+
+function finishRaw(raws: RawQuote[]): Quote[] {
+  const explicit = raws.filter((raw) => raw.mentionedVinco || raw.headerKind === "bare").length;
+  const withPaper = raws.filter((raw) => raw.material.trim()).length;
+  const fileIsDieCut = withPaper === 0 && explicit > 0;
   const quotes: Quote[] = [];
-  let current: Quote | null = null;
+
+  for (const raw of raws) {
+    const family: QuoteFamily =
+      raw.mentionedVinco || raw.headerKind === "bare" || (fileIsDieCut && !raw.material.trim())
+        ? "corte_vinco"
+        : "padrao";
+    const measures = measuresFor(raw, family);
+    const tiers = [...raw.tiers];
+    if (raw.pendingPrice != null) tiers.push({ quantity: 1, unitPrice: raw.pendingPrice, detail: "preço fixo" });
+    tiers.sort((a, b) => a.quantity - b.quantity);
+    const partial = {
+      ...measures,
+      material: raw.material,
+      note: raw.note,
+      family,
+      tiers,
+    };
+    quotes.push({ ...partial, id: quoteId(partial) });
+  }
+
+  const byId = new Map<string, Quote>();
+  for (const quote of quotes) byId.set(quote.id, quote);
+  return [...byId.values()].sort(compareQuotes);
+}
+
+export function parseQuotes(text: string): Quote[] {
+  const raws: RawQuote[] = [];
+  let current: RawQuote | null = null;
 
   function commit() {
-    if (current && current.tiers.length) quotes.push(current);
+    if (!current) return;
+    if (current.tiers.length || current.pendingPrice != null) raws.push(current);
     current = null;
   }
 
-  for (const raw of text.replace(/^\uFEFF/, "").split(/\r?\n/)) {
-    const line = raw.trim();
+  function pushTier(parsed: ParsedPrice) {
+    if (!current) return;
+    if (parsed.kind === "fixed") {
+      current.pendingPrice = parsed.unitPrice;
+      return;
+    }
+    current.pendingPrice = null;
+    current.tiers.push(parsed.tier);
+  }
+
+  for (const rawLine of text.replace(/^\uFEFF/, "").split(/\r?\n/)) {
+    const line = rawLine.trim();
     if (!line || /^quantidade\s+valor/i.test(line) || /^esse e o formato/i.test(normalizeLabel(line))) continue;
 
     const caixa = line.match(/^caixa\b(.*)$/i);
     const dims = caixa ? caixa[1].match(DIMENSIONS) : null;
     if (caixa && dims && dims.index != null) {
       commit();
-      const extra = splitExtra(caixa[1].slice(0, dims.index), caixa[1].slice(dims.index + dims[0].length));
-      const draft = {
-        width: Number(dims[1]),
-        depth: Number(dims[2]),
-        height: Number(dims[3]),
-        material: extra.material,
-        note: extra.note,
-        tiers: [] as QuoteTier[],
-      };
-      current = { ...draft, id: quoteId(draft) };
+      const trailing = takeTrailingTier(caixa[1].slice(dims.index + dims[0].length));
+      const extra = splitExtra(caixa[1].slice(0, dims.index), trailing.rest);
+      current = blankRaw(
+        Number(dims[1]),
+        Number(dims[2]),
+        Number(dims[3]),
+        line,
+        "caixa",
+        extra.material,
+        extra.note,
+        trailing.tier,
+      );
+      continue;
+    }
+
+    const bare = line.match(BARE_DIMENSIONS);
+    if (bare) {
+      commit();
+      current = blankRaw(Number(bare[1]), Number(bare[2]), Number(bare[3]), line, "bare", "", "", null);
       continue;
     }
 
     if (/^papel[aã]o\b/i.test(line)) {
       if (current) current.material = line.replace(/\.$/, "").trim();
-      if (current) current.id = quoteId(current);
       continue;
     }
 
-    const tier = parsePriceLine(line);
-    if (tier && current) current.tiers.push(tier);
+    const minimo = line.match(/^m[ií]nimo\s+de\s+(\d{1,3}(?:\.\d{3})+|\d+)\b/i);
+    if (minimo && current?.pendingPrice != null) {
+      current.tiers.push({
+        quantity: parseQuantity(minimo[1]),
+        unitPrice: current.pendingPrice,
+        detail: "preço fixo",
+      });
+      current.pendingPrice = null;
+      continue;
+    }
+
+    const parsed = parsePriceLine(line);
+    if (parsed) pushTier(parsed);
   }
   commit();
+  return finishRaw(raws);
+}
 
-  const byId = new Map<string, Quote>();
-  for (const quote of quotes) byId.set(quote.id, quote);
-  return [...byId.values()].sort(
-    (a, b) => a.width - b.width || a.depth - b.depth || a.height - b.height || a.material.localeCompare(b.material, "pt-BR"),
+function compareQuotes(a: Quote, b: Quote): number {
+  const familyOrder = (a.family === "corte_vinco" ? 1 : 0) - (b.family === "corte_vinco" ? 1 : 0);
+  return (
+    familyOrder ||
+    a.width - b.width ||
+    a.depth - b.depth ||
+    a.height - b.height ||
+    a.material.localeCompare(b.material, "pt-BR") ||
+    a.note.localeCompare(b.note, "pt-BR")
   );
 }
 
@@ -126,13 +328,14 @@ function sameMeasure(storedMm: number, asked: number): boolean {
   return Math.abs(storedMm / 10 - asked) < 0.051;
 }
 
-export function searchQuotes(quotes: Quote[], query: string, material = ""): Quote[] {
+export function searchQuotes(quotes: Quote[], query: string, material = "", family: "" | QuoteFamily = ""): Quote[] {
   const numbers = askedMeasures(query);
   const ignored = new Set(["x", "caixa", "caixas", "rs", "unidade", "cm", "mm", "centimetro", "milimetro"]);
   const words = normalizeLabel(query)
     .split(/[^a-z0-9]+/)
     .filter((token) => token && !ignored.has(token) && !/^\d+$/.test(token));
   return quotes.filter((quote) => {
+    if (family && quote.family !== family) return false;
     if (material === "__none__" && quote.material) return false;
     if (material && material !== "__none__" && normalizeLabel(quote.material) !== normalizeLabel(material)) return false;
     const dims = [quote.width, quote.depth, quote.height];
@@ -142,7 +345,8 @@ export function searchQuotes(quotes: Quote[], query: string, material = ""): Quo
       return false;
     }
     if (!words.length) return true;
-    const haystack = normalizeLabel(`${quote.material} ${quote.note}`);
+    const familyText = quote.family === "corte_vinco" ? "corte e vinco" : "";
+    const haystack = normalizeLabel(`${quote.material} ${quote.note} ${familyText}`);
     return words.every((word) => haystack.includes(word));
   });
 }
@@ -153,6 +357,7 @@ export type QuoteDraft = {
   height: string;
   material: string;
   note: string;
+  family: QuoteFamily;
   tiers: { quantity: string; unitPrice: string }[];
 };
 
@@ -163,6 +368,7 @@ export function emptyQuoteDraft(): QuoteDraft {
     height: "",
     material: "",
     note: "",
+    family: "padrao",
     tiers: [{ quantity: "", unitPrice: "" }],
   };
 }
@@ -174,6 +380,7 @@ export function draftFromQuote(quote: Quote): QuoteDraft {
     height: String(quote.height),
     material: quote.material,
     note: quote.note,
+    family: quote.family === "corte_vinco" ? "corte_vinco" : "padrao",
     tiers: quote.tiers.map((tier) => ({
       quantity: String(tier.quantity),
       unitPrice: tier.unitPrice.toFixed(2).replace(".", ","),
@@ -217,12 +424,15 @@ export function buildQuote(draft: QuoteDraft): { quote: Quote } | { error: strin
   if (!tiers.length) return { error: "Inclua pelo menos uma faixa de quantidade e valor." };
   tiers.sort((a, b) => a.quantity - b.quantity);
 
+  const note = draft.note.trim();
+  const family: QuoteFamily = draft.family === "corte_vinco" || /vinco/i.test(note) ? "corte_vinco" : "padrao";
   const partial = {
     width,
     depth,
     height,
     material: draft.material.trim().replace(/\.$/, ""),
-    note: draft.note.trim(),
+    note,
+    family,
     tiers,
   };
   return { quote: { ...partial, id: quoteId(partial) } };
@@ -232,21 +442,36 @@ export function lowestUnitPrice(quote: Quote): number {
   return Math.min(...quote.tiers.map((tier) => tier.unitPrice));
 }
 
-export function groupQuotes(quotes: Quote[]): { material: string; quotes: Quote[] }[] {
-  const groups = new Map<string, Quote[]>();
+export type QuoteGroup = {
+  key: string;
+  label: string;
+  family: QuoteFamily;
+  material: string;
+  quotes: Quote[];
+};
+
+export function groupQuotes(quotes: Quote[]): QuoteGroup[] {
+  const groups = new Map<string, QuoteGroup>();
   for (const quote of quotes) {
-    const label = quote.material || "Papelão não informado";
-    const list = groups.get(label);
-    if (list) list.push(quote);
-    else groups.set(label, [quote]);
+    const family: QuoteFamily = quote.family === "corte_vinco" ? "corte_vinco" : "padrao";
+    const material = quote.material.trim();
+    const label =
+      family === "corte_vinco"
+        ? material
+          ? `Corte e vinco · ${material}`
+          : "Corte e vinco"
+        : material || "Papelão não informado";
+    const key = `${family}|${label}`;
+    const group = groups.get(key);
+    if (group) group.quotes.push(quote);
+    else groups.set(key, { key, label, family, material, quotes: [quote] });
   }
-  return [...groups.keys()]
-    .sort((a, b) => {
-      if (a === "Papelão não informado") return 1;
-      if (b === "Papelão não informado") return -1;
-      return a.localeCompare(b, "pt-BR");
-    })
-    .map((material) => ({ material, quotes: groups.get(material) || [] }));
+  return [...groups.values()].sort((a, b) => {
+    const familyOrder = (a.family === "corte_vinco" ? 1 : 0) - (b.family === "corte_vinco" ? 1 : 0);
+    if (familyOrder) return familyOrder;
+    const unnamed = (group: QuoteGroup) => (group.family === "padrao" && !group.material ? 1 : 0);
+    return unnamed(a) - unnamed(b) || a.label.localeCompare(b.label, "pt-BR");
+  });
 }
 
 export function mergeQuotes(current: Quote[], incoming: Quote[]): { quotes: Quote[]; added: number; updated: number } {
@@ -258,8 +483,6 @@ export function mergeQuotes(current: Quote[], incoming: Quote[]): { quotes: Quot
     else added += 1;
     byId.set(quote.id, quote);
   }
-  const quotes = [...byId.values()].sort(
-    (a, b) => a.width - b.width || a.depth - b.depth || a.height - b.height || a.material.localeCompare(b.material, "pt-BR"),
-  );
+  const quotes = [...byId.values()].sort(compareQuotes);
   return { quotes, added, updated };
 }
