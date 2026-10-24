@@ -3,44 +3,18 @@
 import { formatBrl } from "@/lib/format";
 import { displayNote, formatCm, groupQuotes, lowestUnitPrice, tierQuantityLabel, type Quote } from "@/lib/quotes";
 
-export function QuoteCatalog({
-  quotes,
-  filtered,
-  prices,
-  onPrices,
-}: {
-  quotes: Quote[];
-  filtered: boolean;
-  prices: boolean;
-  onPrices: (prices: boolean) => void;
-}) {
+export function QuoteCatalog({ quotes, filtered }: { quotes: Quote[]; filtered: boolean }) {
   const groups = groupQuotes(quotes);
   return (
     <div className="space-y-6">
       <div className="rounded-3xl bg-ink px-6 py-6 text-paper">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#e7d7b4]">Para divulgar</p>
-        <h3 className="mt-2 font-serif text-4xl">{prices ? "Catálogo de caixas" : "Catálogo de medidas"}</h3>
+        <h3 className="mt-2 font-serif text-4xl">Catálogo de caixas</h3>
         <p className="mt-2 max-w-xl text-sm text-paper/80">
           As medidas saem em centímetros. Corte e vinco fica numa seção própria, marcado em cada caixa.
           {prices ? " Os valores continuam por unidade, conforme a quantidade." : " Esta versão não leva preços."}
           {filtered ? " O PDF usa só este recorte." : " O PDF leva estas mesmas caixas."}
         </p>
-        <div className="mt-4 flex gap-2">
-          <button
-            type="button"
-            className={`rounded-full px-3 py-1.5 text-sm ${prices ? "bg-paper text-ink" : "border border-paper/40 text-paper"}`}
-            onClick={() => onPrices(true)}
-          >
-            Com preços
-          </button>
-          <button
-            type="button"
-            className={`rounded-full px-3 py-1.5 text-sm ${prices ? "border border-paper/40 text-paper" : "bg-paper text-ink"}`}
-            onClick={() => onPrices(false)}
-          >
-            Só medidas
-          </button>
-        </div>
       </div>
       {!quotes.length && <p className="text-sm text-mute">Nenhuma caixa neste recorte.</p>}
       {groups.map((group) => (
@@ -57,19 +31,15 @@ export function QuoteCatalog({
                       </p>
                     )}
                     <p className="font-serif text-3xl leading-none">
-                      {formatCm(quote.width)} × {formatCm(quote.depth)} × {formatCm(quote.height)}
-                      <span className="ml-2 text-lg text-mute">cm</span>
+                      {quote.width} × {quote.depth} × {quote.height}
                     </p>
                     {displayNote(quote) && <p className="mt-2 text-sm text-mute">{displayNote(quote)}</p>}
                   </div>
-                  {prices && (
-                    <p className="rounded-full bg-pineSoft px-3 py-1 text-right text-xs font-medium text-pine">
-                      a partir de
-                      <span className="mt-0.5 block text-sm">{formatBrl(lowestUnitPrice(quote))}</span>
-                    </p>
-                  )}
+                  <p className="rounded-full bg-pineSoft px-3 py-1 text-right text-xs font-medium text-pine">
+                    a partir de
+                    <span className="mt-0.5 block text-sm">{formatBrl(lowestUnitPrice(quote))}</span>
+                  </p>
                 </div>
-                {prices && (
                 <ul className="mt-3 divide-y divide-line text-sm">
                   {quote.tiers.map((tier) => (
                     <li key={`${tier.quantity}-${tier.detail || ""}`} className="flex items-center justify-between py-1.5">
@@ -78,7 +48,6 @@ export function QuoteCatalog({
                     </li>
                   ))}
                 </ul>
-                )}
               </article>
             ))}
           </div>
