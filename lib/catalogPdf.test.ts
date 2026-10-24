@@ -18,11 +18,5 @@ const empty = buildCatalogPdf([], { generatedAt });
 assert.equal(empty.getNumberOfPages(), 1);
 
 assert.equal(catalogFilename(generatedAt), "catalogo-caixas-2026-10-13.pdf");
-assert.equal(catalogFilename(generatedAt, "medidas"), "catalogo-medidas-2026-10-13.pdf");
 
-const measures = buildCatalogPdf(quotes, { generatedAt, kind: "medidas" });
-assert.ok(measures.getNumberOfPages() >= 1);
-assert.ok(measures.getNumberOfPages() < full.getNumberOfPages());
-assert.equal(Buffer.from(measures.output("arraybuffer")).subarray(0, 5).toString(), "%PDF-");
-
-console.log("catalog pdf ok", full.getNumberOfPages(), measures.getNumberOfPages());
+console.log("catalog pdf ok", full.getNumberOfPages());

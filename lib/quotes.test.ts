@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { buildQuote, draftFromQuote, formatCm, formatMeasuresCm, parseQuotes, searchQuotes } from "./quotes";
+import { buildQuote, draftFromQuote, parseQuotes, searchQuotes } from "./quotes";
 
 const text = readFileSync(new URL("../data/medidas-de-exemplo.txt", import.meta.url), "utf8");
 const quotes = parseQuotes(text);
@@ -87,10 +87,5 @@ const missingPrice = buildQuote({
   tiers: [{ quantity: "100", unitPrice: "" }],
 });
 assert.ok("error" in missingPrice);
-
-assert.equal(formatCm(220), "22");
-assert.equal(formatCm(225), "22,5");
-assert.equal(formatCm(5), "0,5");
-assert.equal(formatMeasuresCm({ width: 220, depth: 220, height: 160 }, "x"), "22 x 22 x 16 cm");
 
 console.log("quotes ok", quotes.length);

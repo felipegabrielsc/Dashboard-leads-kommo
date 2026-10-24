@@ -13,7 +13,6 @@ import {
   searchQuotes,
   type Quote,
 } from "@/lib/quotes";
-import type { CatalogIdentity } from "@/lib/types";
 
 export function QuotesPanel({
   quotes,
@@ -37,11 +36,9 @@ export function QuotesPanel({
   const [notice, setNotice] = useState("");
   const [localError, setLocalError] = useState("");
   const [view, setView] = useState<"lista" | "catalogo">("lista");
-  const [catalogPrices, setCatalogPrices] = useState(true);
   const [form, setForm] = useState<{ title: string; initialId: string; draft: ReturnType<typeof emptyQuoteDraft> } | null>(
     null,
   );
-  const [identity, setIdentity] = useState(profile);
   const fileRef = useRef<HTMLInputElement>(null);
   const materials = useMemo(() => {
     const names = new Set(quotes.map((quote) => quote.material).filter(Boolean));
@@ -49,10 +46,6 @@ export function QuotesPanel({
   }, [quotes]);
   const visible = useMemo(() => searchQuotes(quotes, query, material), [material, query, quotes]);
   const filtered = query.trim() !== "" || material !== "";
-
-  useEffect(() => {
-    setIdentity(profile);
-  }, [profile]);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -80,10 +73,10 @@ export function QuotesPanel({
     );
   }
 
-  async function downloadPdf(kind: "precos" | "medidas") {
+  async function downloadPdf() {
     setLocalError("");
     const { downloadCatalogPdf } = await import("@/lib/catalogPdf");
-    downloadCatalogPdf(visible, filtered, kind, identity);
+    downloadCatalogPdf(visible, filtered);
   }
 
   function saveManual(quote: Quote) {
@@ -111,7 +104,7 @@ export function QuotesPanel({
               Orçamentos
             </h2>
             <p className="mt-1 max-w-xl text-sm text-mute">
-              Pesquise e cadastre em milímetros. O catálogo sai em centímetros, com preços ou só com as medidas.
+              Pesquise, cadastre uma medida ou importe o txt. O catálogo baixa em PDF o que estiver nesta pesquisa.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -129,17 +122,9 @@ export function QuotesPanel({
               type="button"
               className="btn disabled:cursor-not-allowed disabled:opacity-40"
               disabled={!visible.length}
-              onClick={() => void downloadPdf("precos")}
+              onClick={() => void downloadPdf()}
             >
-              PDF com preços
-            </button>
-            <button
-              type="button"
-              className="btn disabled:cursor-not-allowed disabled:opacity-40"
-              disabled={!visible.length}
-              onClick={() => void downloadPdf("medidas")}
-            >
-              PDF só medidas
+              Baixar PDF
             </button>
             <button type="button" className="btn" onClick={onClose}>
               Fechar
@@ -274,7 +259,7 @@ export function QuotesPanel({
             <p className="text-sm text-mute">Nenhuma caixa com essa medida ou esse papelão.</p>
           )}
           {view === "catalogo" ? (
-            <QuoteCatalog quotes={visible} filtered={filtered} prices={catalogPrices} onPrices={setCatalogPrices} />
+            <QuoteCatalog quotes={visible} filtered={filtered} />
           ) : (
           <div className="grid gap-3 md:grid-cols-2">
             {visible.map((quote) => (
