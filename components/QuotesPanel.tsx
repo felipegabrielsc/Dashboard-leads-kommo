@@ -16,6 +16,7 @@ import {
   type Quote,
   type QuoteFamily,
 } from "@/lib/quotes";
+import type { CatalogIdentity } from "@/lib/types";
 
 export function QuotesPanel({
   quotes,
@@ -40,9 +41,11 @@ export function QuotesPanel({
   const [notice, setNotice] = useState("");
   const [localError, setLocalError] = useState("");
   const [view, setView] = useState<"lista" | "catalogo">("lista");
+  const [catalogPrices, setCatalogPrices] = useState(true);
   const [form, setForm] = useState<{ title: string; initialId: string; draft: ReturnType<typeof emptyQuoteDraft> } | null>(
     null,
   );
+  const [identity, setIdentity] = useState(profile);
   const fileRef = useRef<HTMLInputElement>(null);
   const materials = useMemo(() => {
     const names = new Set(quotes.map((quote) => quote.material).filter(Boolean));
@@ -51,6 +54,10 @@ export function QuotesPanel({
   const visible = useMemo(() => searchQuotes(quotes, query, material, family), [family, material, query, quotes]);
   const filtered = query.trim() !== "" || material !== "" || family !== "";
   const dieCutCount = quotes.filter((quote) => quote.family === "corte_vinco").length;
+
+  useEffect(() => {
+    setIdentity(profile);
+  }, [profile]);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -86,10 +93,10 @@ export function QuotesPanel({
     );
   }
 
-  async function downloadPdf() {
+  async function downloadPdf(kind: "precos" | "medidas") {
     setLocalError("");
     const { downloadCatalogPdf } = await import("@/lib/catalogPdf");
-    downloadCatalogPdf(visible, filtered);
+    downloadCatalogPdf(visible, filtered, kind, identity);
   }
 
   function saveManual(quote: Quote) {
@@ -135,9 +142,17 @@ export function QuotesPanel({
               type="button"
               className="btn disabled:cursor-not-allowed disabled:opacity-40"
               disabled={!visible.length}
-              onClick={() => void downloadPdf()}
+              onClick={() => void downloadPdf("precos")}
             >
-              Baixar PDF
+              PDF com preços
+            </button>
+            <button
+              type="button"
+              className="btn disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={!visible.length}
+              onClick={() => void downloadPdf("medidas")}
+            >
+              PDF só medidas
             </button>
             <button type="button" className="btn" onClick={onClose}>
               Fechar
@@ -291,7 +306,7 @@ export function QuotesPanel({
             <p className="text-sm text-mute">Nenhuma caixa com essa medida ou esse papelão.</p>
           )}
           {view === "catalogo" ? (
-            <QuoteCatalog quotes={visible} filtered={filtered} />
+            <QuoteCatalog quotes={visible} filtered={filtered} prices={catalogPrices} onPrices={setCatalogPrices} />
           ) : (
           <div className="space-y-6">
             {(["padrao", "corte_vinco"] as const).map((section) => {
