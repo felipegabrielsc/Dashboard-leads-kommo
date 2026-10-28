@@ -51,7 +51,9 @@ export function LoginForm() {
         });
         if (signInError) throw signInError;
       }
-      router.push("/");
+      const next = new URLSearchParams(window.location.search).get("next");
+      const destination = next && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/login") ? next : "/";
+      router.push(destination);
       router.refresh();
     } catch (caught) {
       const text =
@@ -69,7 +71,7 @@ export function LoginForm() {
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brass">Kommo</p>
       <h1 className="mt-2 font-serif text-4xl">Entrar nos leads</h1>
       <p className="mt-3 text-sm text-mute">
-        A dashboard continua aberta para consulta. A conta serve para lançar, editar e apagar.
+        A tela de leads diários continua aberta para consulta. A conta serve para lançar, editar e apagar, e para abrir o Comercial Kommo.
       </p>
       <div className="mt-6 flex gap-2">
         {(

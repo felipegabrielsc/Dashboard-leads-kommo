@@ -196,6 +196,12 @@ export function DashboardApp() {
       <header className="sticky top-0 z-30 border-b border-line/80 bg-paper/95 backdrop-blur">
         <div className="mx-auto flex max-w-[1440px] flex-wrap items-end justify-between gap-4 px-4 py-4">
           <div>
+            <div className="mb-3 flex flex-wrap gap-2">
+              <span className="chip chip-on">Leads diários</span>
+              <Link href="/kommo" className="chip">
+                Comercial Kommo
+              </Link>
+            </div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brass">Kommo</p>
             <h1 className="font-serif text-4xl leading-none">Leads do dia a dia</h1>
             <p className="mt-2 max-w-xl text-sm text-mute">
