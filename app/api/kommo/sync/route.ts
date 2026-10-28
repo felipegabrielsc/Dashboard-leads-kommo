@@ -1,6 +1,7 @@
 import { commercialReader, cronAuthorized, syncWriter } from "@/lib/kommo/access";
 import { kommoCredentials } from "@/lib/kommo/client";
-import { explainKommoDb, kommoStore } from "@/lib/kommo/db";
+import { kommoStore } from "@/lib/kommo/db";
+import { explainKommoDb } from "@/lib/kommo/errors";
 import { privateJson } from "@/lib/kommo/http";
 import { stepSync } from "@/lib/kommo/sync";
 
@@ -62,7 +63,5 @@ export async function POST(request: Request) {
 }
 
 function explainSyncError(error: unknown) {
-  const explained = explainKommoDb(error);
-  if (explained.includes("supabase/kommo.sql")) return explained;
-  return error instanceof Error ? error.message : explained;
+  return explainKommoDb(error);
 }

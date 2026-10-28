@@ -22,7 +22,7 @@ create table if not exists public.kommo_statuses (
   kind text not null default 'open' check (kind in ('unsorted', 'open', 'won', 'lost')),
   color text not null default '',
   updated_at timestamptz not null default now(),
-  primary key (account_id, id)
+  primary key (account_id, pipeline_id, id)
 );
 
 create table if not exists public.kommo_users (
@@ -122,3 +122,27 @@ begin
 end $$;
 
 grant usage, select on sequence public.kommo_sync_logs_id_seq to authenticated;
+grant usage, select on sequence public.kommo_sync_logs_id_seq to service_role;
+
+-- A etapa ganha (142) e a perdida (143) se repetem em cada funil.
+-- Quem já criou a tabela com a chave antiga (conta + etapa) precisa desta troca.
+do $$
+declare
+  cons text;
+  def text;
+begin
+  select conname, pg_get_constraintdef(oid) into cons, def
+  from pg_constraint
+  where conrelid = 'public.kommo_statuses'::regclass and contype = 'p';
+  if cons is not null and position('pipeline_id' in def) = 0 then
+    execute format('alter table public.kommo_statuses drop constraint %I', cons);
+    alter table public.kommo_statuses add primary key (account_id, pipeline_id, id);
+  end if;
+end $$;
+
+grant select, insert, update, delete on public.kommo_pipelines to service_role;
+grant select, insert, update, delete on public.kommo_statuses to service_role;
+grant select, insert, update, delete on public.kommo_users to service_role;
+grant select, insert, update, delete on public.kommo_leads to service_role;
+grant select, insert, update, delete on public.kommo_sync_state to service_role;
+grant select, insert, update, delete on public.kommo_sync_logs to service_role;
