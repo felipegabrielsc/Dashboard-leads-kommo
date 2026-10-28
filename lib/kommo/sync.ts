@@ -13,6 +13,7 @@ import {
   type RawStatus,
   type RawUser,
 } from "./client";
+import { describeError } from "./errors";
 import type { StatusKind } from "./types";
 
 const PAGES_PER_STEP = 3;
@@ -184,6 +185,7 @@ export async function stepSync(input: {
       seenUpdatedAt: null,
     };
     await input.store.saveState(state);
+    return progress(state, false, "Conta localizada. Lendo funis.");
   }
   if (!state) throw new Error("Não consegui abrir o estado da sincronização.");
 
@@ -271,18 +273,22 @@ export async function stepSync(input: {
 
     return progress(state, true, "Nada pendente.");
   } catch (error) {
-    const message = error instanceof Error ? error.message : "A sincronização falhou.";
+    const message = describeError(error);
     if (state) {
       state = { ...state, lastError: message, lastAttemptAt: now.toISOString() };
-      await input.store.saveState(state);
-      await input.store.writeLog({
-        accountId: state.accountId,
-        mode: state.mode,
-        ok: false,
-        pages: state.pagesDone,
-        upserted: state.upserted,
-        message,
-      });
+      try {
+        await input.store.saveState(state);
+        await input.store.writeLog({
+          accountId: state.accountId,
+          mode: state.mode,
+          ok: false,
+          pages: state.pagesDone,
+          upserted: state.upserted,
+          message,
+        });
+      } catch {
+        // A falha original continua sendo a resposta. O registro do erro é secundário.
+      }
     }
     throw error;
   }
@@ -357,7 +363,17 @@ async function importStructure(
       },
     ];
   });
-  await store.replaceStructure({ pipelines: pipelineRows, statuses: statusRows, users: userRows });
+  await store.replaceStructure({
+    pipelines: dedupeBy(pipelineRows, (row) => `${row.accountId}:${row.id}`),
+    statuses: dedupeBy(statusRows, (row) => `${row.accountId}:${row.pipelineId}:${row.id}`),
+    users: dedupeBy(userRows, (row) => `${row.accountId}:${row.id}`),
+  });
+}
+
+function dedupeBy<T>(rows: T[], key: (row: T) => string): T[] {
+  const map = new Map<string, T>();
+  for (const row of rows) map.set(key(row), row);
+  return [...map.values()];
 }
 
 function statusWrite(accountId: number, pipelineId: number, status: RawStatus, kind: StatusKind): StatusWrite {

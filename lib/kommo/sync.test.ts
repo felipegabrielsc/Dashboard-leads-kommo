@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { kommoCredentials, safeKommoApiUrl, unixToIso } from "./client";
+import { explainKommoDb } from "./errors";
 import { stepSync, type LeadWrite, type StatusWrite, type SyncStateRow, type SyncStore } from "./sync";
 
 assert.equal(unixToIso(0), null);
@@ -163,7 +164,7 @@ function pages(handler: (url: string) => { items: ReturnType<typeof lead>[]; nex
 async function run(store: SyncStore, fetchJson: Parameters<typeof stepSync>[0]["fetchJson"], mode: "full" | "incremental") {
   let restart = false;
   let step;
-  for (let guard = 0; guard < 12; guard += 1) {
+  for (let guard = 0; guard < 15; guard += 1) {
     step = await stepSync({ store, credentials, mode, restart, fetchJson, now, pauseMs: 0 });
     restart = false;
     if (step.done) return step;
@@ -228,11 +229,15 @@ const failingPages = pages((url) => {
   if (page >= 2) return "throw";
   return { items: [lead(1)], next: "/api/v4/leads?limit=250&page=2" };
 });
-await stepSync({ store: failing.store, credentials, mode: "full", fetchJson: failingPages.fetchJson, now, pauseMs: 0 });
-await assert.rejects(
-  stepSync({ store: failing.store, credentials, mode: "full", fetchJson: failingPages.fetchJson, now, pauseMs: 0 }),
-  /falha de teste/,
-);
+let failingError: unknown = null;
+for (let guard = 0; guard < 6 && !failingError; guard += 1) {
+  try {
+    await stepSync({ store: failing.store, credentials, mode: "full", fetchJson: failingPages.fetchJson, now, pauseMs: 0 });
+  } catch (error) {
+    failingError = error;
+  }
+}
+assert.match(failingError instanceof Error ? failingError.message : "", /falha de teste/);
 assert.equal(failing.state()?.phase, "leads");
 assert.equal(failing.state()?.cursorUpdatedAt, null);
 assert.match(failing.state()?.resumeUrl || "", /page=1/);
@@ -245,14 +250,49 @@ const hostilePages = pages((url) => {
   if (page === 1) return { items: [lead(1)], next: "https://evil.example/api/v4/leads?page=2" };
   return { items: [], next: null };
 });
-await stepSync({ store: hostile.store, credentials, mode: "full", fetchJson: hostilePages.fetchJson, now, pauseMs: 0 });
-await assert.rejects(
-  stepSync({ store: hostile.store, credentials, mode: "full", fetchJson: hostilePages.fetchJson, now, pauseMs: 0 }),
-  /API do Kommo/,
-);
+let hostileError: unknown = null;
+for (let guard = 0; guard < 6 && !hostileError; guard += 1) {
+  try {
+    await stepSync({ store: hostile.store, credentials, mode: "full", fetchJson: hostilePages.fetchJson, now, pauseMs: 0 });
+  } catch (error) {
+    hostileError = error;
+  }
+}
+assert.match(hostileError instanceof Error ? hostileError.message : "", /API do Kommo/);
 assert.equal(hostilePages.calls.some((url) => url.includes("evil.example")), false);
 assert.equal(hostile.leads.size, 0);
 assert.equal(hostile.state()?.phase, "leads");
+
+const shared = memory();
+const sharedFetch = async (_credentials: typeof credentials, url: string) => {
+  if (url.includes("/api/v4/account")) return { status: 200, body: { id: 7 } };
+  if (url.includes("/pipelines")) {
+    const status = { id: 142, name: "Ganho", sort: 20, type: 0, is_editable: false };
+    return {
+      status: 200,
+      body: {
+        _embedded: {
+          pipelines: [
+            { id: 1, name: "Vendas", _embedded: { statuses: [status, status] } },
+            { id: 2, name: "Atacado", _embedded: { statuses: [status] } },
+          ],
+        },
+      },
+    };
+  }
+  if (url.includes("/users")) return { status: 200, body: { _embedded: { users: [] } } };
+  return { status: 204, body: null };
+};
+for (let guard = 0; guard < 4; guard += 1) {
+  const step = await stepSync({ store: shared.store, credentials, mode: "full", fetchJson: sharedFetch, now, pauseMs: 0 });
+  if (step.phase === "leads") break;
+}
+const wonRows = shared.statuses.filter((status) => status.id === 142);
+assert.equal(wonRows.length, 2);
+assert.deepEqual(wonRows.map((status) => status.pipelineId).sort(), [1, 2]);
+
+assert.match(explainKommoDb({ message: "ON CONFLICT DO UPDATE command cannot affect row a second time", code: "21000" }), /kommo.sql/);
+assert.match(explainKommoDb({ message: "new row violates row-level security policy", code: "42501" }), /service role/);
 
 console.log("kommo sync ok");
 }

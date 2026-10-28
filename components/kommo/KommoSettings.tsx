@@ -22,6 +22,16 @@ type StepBody = {
   error?: string;
 };
 
+function parseStep(raw: string): StepBody {
+  if (!raw) return {};
+  try {
+    const body = JSON.parse(raw) as StepBody;
+    return body && typeof body === "object" ? body : {};
+  } catch {
+    return {};
+  }
+}
+
 export function KommoSettings() {
   const [data, setData] = useState<ConfigResponse | null>(null);
   const [status, setStatus] = useState(0);
@@ -58,8 +68,16 @@ export function KommoSettings() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ mode, restart: again }),
         });
-        const body = (await response.json().catch(() => ({}))) as StepBody;
-        if (!response.ok) throw new Error(body.error || "A sincronização falhou.");
+        const raw = await response.text();
+        const body = parseStep(raw);
+        if (!response.ok) {
+          throw new Error(
+            body.error ||
+              (response.status === 502
+                ? "O servidor encerrou a leitura antes de responder. Clique em Continuar."
+                : "A sincronização falhou."),
+          );
+        }
         setProgress(body);
         again = false;
         if (body.done) {
