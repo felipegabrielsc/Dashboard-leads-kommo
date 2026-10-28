@@ -83,7 +83,7 @@ export async function kommoJson(
 ): Promise<{ status: number; body: unknown }> {
   safeKommoApiUrl(credentials.subdomain, url);
   let lastError: KommoApiError | null = null;
-  for (let attempt = 0; attempt < 3; attempt += 1) {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
     let response: Response;
     try {
       response = await fetchImpl(url, {
@@ -92,11 +92,11 @@ export async function kommoJson(
           Accept: "application/json",
         },
         cache: "no-store",
-        signal: AbortSignal.timeout(20_000),
+        signal: AbortSignal.timeout(8_000),
       });
     } catch {
       lastError = new KommoApiError("Não consegui falar com o Kommo. Tente de novo em instantes.", 0);
-      await delay(400 * (attempt + 1));
+      await delay(200 * (attempt + 1));
       continue;
     }
     if (response.status === 204) return { status: 204, body: null };

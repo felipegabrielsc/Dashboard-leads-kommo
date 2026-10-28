@@ -29,9 +29,3 @@ export function createSupabaseService(): SupabaseClient | null {
   if (!url || !key) return null;
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
-
-export function missingKommoTables(error: unknown): boolean {
-  const message =
-    error && typeof error === "object" && "message" in error ? String((error as { message: unknown }).message) : "";
-  return /kommo_|relation|schema cache|does not exist/i.test(message);
-}

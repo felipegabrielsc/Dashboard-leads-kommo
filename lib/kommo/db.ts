@@ -1,7 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CommercialLead, Stage, StatusKind } from "./types";
 import type { LeadWrite, PipelineWrite, StatusWrite, SyncStateRow, SyncStore, UserWrite } from "./sync";
-import { missingKommoTables } from "../supabaseServer";
+
+export { explainKommoDb } from "./errors";
 
 type StateDb = {
   account_id: number;
@@ -92,7 +93,7 @@ export function kommoStore(client: SupabaseClient): SyncStore {
         if (error) throw error;
       }
       if (statuses.length) {
-        const { error } = await client.from("kommo_statuses").upsert(statuses.map(statusRow), { onConflict: "account_id,id" });
+        const { error } = await client.from("kommo_statuses").upsert(statuses.map(statusRow), { onConflict: "account_id,pipeline_id,id" });
         if (error) throw error;
       }
       if (users.length) {
@@ -206,13 +207,6 @@ function leadRow(lead: LeadWrite) {
   };
 }
 
-export function explainKommoDb(error: unknown): string {
-  if (missingKommoTables(error)) {
-    return "As tabelas do Comercial Kommo ainda não existem. Execute supabase/kommo.sql no SQL Editor.";
-  }
-  return error instanceof Error ? error.message : "Não consegui ler o comercial no Supabase.";
-}
-
 type LeadDb = {
   id: number;
   name: string | null;
@@ -250,7 +244,7 @@ export async function loadAccountSnapshot(client: SupabaseClient, accountId: num
       accountId,
     ),
   ]);
-  const statusName = new Map(statusRows.map((row) => [row.id, row.name]));
+  const statusName = new Map(statusRows.map((row) => [`${row.pipeline_id}:${row.id}`, row.name]));
   const userName = new Map(userRows.map((row) => [row.id, row.name]));
   const pipelineName = new Map(pipelineRows.map((row) => [row.id, row.name]));
   const leads: CommercialLead[] = leadRows.map((row) => ({
@@ -259,7 +253,7 @@ export async function loadAccountSnapshot(client: SupabaseClient, accountId: num
     price: Number(row.price) || 0,
     pipelineId: row.pipeline_id,
     statusId: row.status_id,
-    statusName: (row.status_id && statusName.get(row.status_id)) || "",
+    statusName: (row.pipeline_id && row.status_id && statusName.get(`${row.pipeline_id}:${row.status_id}`)) || "",
     statusKind: row.status_kind,
     userId: row.responsible_user_id,
     userName: (row.responsible_user_id && userName.get(row.responsible_user_id)) || "",
