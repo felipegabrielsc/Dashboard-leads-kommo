@@ -17,7 +17,7 @@ export function V4Panel({ summary, importHref }: { summary: V4SummaryView; impor
   if (!summary.ready) {
     return (
       <section className="panel p-5">
-        <h2 className="font-serif text-2xl">Recompras V4</h2>
+        <h2 className="font-serif text-2xl">Recompras</h2>
         <p className="mt-2 text-sm text-mute">
           Para separar primeira compra e recompra, execute <span className="font-medium text-ink">supabase/v4-vendas.sql</span> no SQL Editor.
         </p>
@@ -27,7 +27,7 @@ export function V4Panel({ summary, importHref }: { summary: V4SummaryView; impor
   if (!summary.imported) {
     return (
       <section className="panel p-5">
-        <h2 className="font-serif text-2xl">Recompras V4</h2>
+        <h2 className="font-serif text-2xl">Recompras</h2>
         <p className="mt-2 text-sm text-mute">
           Nenhuma planilha ativa. Importe as vendas para mostrar recompra, primeira compra e a receita consolidada.
         </p>
@@ -41,7 +41,7 @@ export function V4Panel({ summary, importHref }: { summary: V4SummaryView; impor
     <section className="space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="font-serif text-2xl">Recompras V4</h2>
+          <h2 className="font-serif text-2xl">Recompras</h2>
           <p className="mt-1 text-sm text-mute">
             Planilha {summary.batch?.fileName || "ativa"}
             {summary.batch?.importedAt ? `, importada em ${when(summary.batch.importedAt)}` : ""}. Primeira compra fica de fora desta soma.
@@ -55,23 +55,23 @@ export function V4Panel({ summary, importHref }: { summary: V4SummaryView; impor
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <MetricCard label="Receita Kommo" value={formatBrl(summary.kommoRevenue)} hint="Negócios ganhos no período, só do CRM." />
         <MetricCard
-          label="Receita de recompras V4"
+          label="Receita de recompras"
           value={formatBrl(summary.repurchaseRevenue)}
           hint="Recompras do período que não foram marcadas como já registradas no Kommo."
         />
         <MetricCard
           label="Receita consolidada"
           value={formatBrl(summary.consolidatedRevenue)}
-          hint="Receita Kommo mais as recompras V4 ainda não conciliadas."
+          hint="Receita Kommo mais as recompras ainda não conciliadas."
         />
         <MetricCard label="Quantidade de recompras" value={formatInt(summary.repurchaseCount)} hint="Linhas com número da compra maior que 1, neste período." />
         <MetricCard
           label="Ticket médio de recompras"
           value={summary.repurchaseTicket == null ? "—" : formatBrl(summary.repurchaseTicket)}
-          hint="Receita de recompras V4 ÷ quantidade de recompras."
+          hint="Receita de recompras ÷ quantidade de recompras."
         />
         <MetricCard
-          label="Lucro estimado V4"
+          label="Lucro estimado"
           value={formatBrl(summary.estimatedProfit)}
           hint="Soma da coluna de lucro da planilha no período. O valor é estimado."
         />
@@ -109,7 +109,7 @@ export function V4Panel({ summary, importHref }: { summary: V4SummaryView; impor
             </table>
           </div>
         ) : (
-          <p className="mt-3 text-sm text-mute">Nenhuma venda V4 neste período.</p>
+          <p className="mt-3 text-sm text-mute">Nenhuma venda da planilha neste período.</p>
         )}
       </article>
     </section>

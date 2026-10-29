@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnalysisPanel } from "@/components/AnalysisPanel";
 import { CategoryManager } from "@/components/CategoryManager";
 import { DayEditor } from "@/components/DayEditor";
@@ -12,6 +12,7 @@ import { QuotesPanel } from "@/components/QuotesPanel";
 import { Summary } from "@/components/Summary";
 import { TrendCharts } from "@/components/TrendCharts";
 import { sumCategories } from "@/lib/categories";
+import { readDayDraft, writeDayDraft } from "@/lib/dayDraft";
 import { exportCsv, exportJson, exportWorkbook } from "@/lib/exportData";
 import {
   activeFilterCount,
@@ -43,6 +44,11 @@ export function DashboardApp() {
   const [historyDay, setHistoryDay] = useState("");
   const [quotesOpen, setQuotesOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const stored = readDayDraft();
+    if (stored?.open) setEditor(stored.day);
+  }, []);
 
   const { state } = leads;
   const sliced = isSlice(filters);
@@ -168,6 +174,7 @@ export function DashboardApp() {
         description: "",
       });
     }
+    writeDayDraft(null);
     setEditor(undefined);
     setTab("lancamentos");
     setNotice(`Dia ${formatDate(day.date)} salvo na conta.`);
@@ -409,7 +416,10 @@ export function DashboardApp() {
         <DayEditor
           day={editor}
           categories={state.categories}
-          onClose={() => setEditor(undefined)}
+          onClose={() => {
+            writeDayDraft(null);
+            setEditor(undefined);
+          }}
           onSave={saveDay}
         />
       )}

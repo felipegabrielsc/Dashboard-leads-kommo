@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GROUP_META, categoryValue, sumCategories } from "@/lib/categories";
+import { readDayDraft, writeDayDraft } from "@/lib/dayDraft";
 import type { Category, DayRecord, GroupId } from "@/lib/types";
 
 type Draft = {
@@ -25,13 +26,45 @@ export function DayEditor({
   onClose: () => void;
   onSave: (day: DayRecord, extraPhones: string[]) => string | null;
 }) {
-  const [draft, setDraft] = useState<Draft>(() => fromDay(day, categories));
+  const [draft, setDraft] = useState<Draft>(() => storedOrFresh(day, categories));
   const [error, setError] = useState("");
+  const editedDate = day?.date || "";
+  const seenDate = useRef(editedDate);
 
   useEffect(() => {
+    if (seenDate.current === editedDate) return;
+    seenDate.current = editedDate;
     setDraft(fromDay(day, categories));
     setError("");
-  }, [categories, day]);
+  }, [categories, day, editedDate]);
+
+  useEffect(() => {
+    setDraft((current) => {
+      let changed = false;
+      const counts = { ...current.counts };
+      for (const category of categories) {
+        if (!(category.id in counts)) {
+          counts[category.id] = "";
+          changed = true;
+        }
+      }
+      return changed ? { ...current, counts } : current;
+    });
+  }, [categories]);
+
+  useEffect(() => {
+    writeDayDraft({
+      open: true,
+      day,
+      originalDate: draft.originalDate,
+      date: draft.date,
+      review: draft.review,
+      pendingCount: draft.pendingCount,
+      declared: draft.declared,
+      counts: draft.counts,
+      phones: draft.phones,
+    });
+  }, [day, draft]);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -187,6 +220,23 @@ export function DayEditor({
       </form>
     </div>
   );
+}
+
+function storedOrFresh(day: DayRecord | null, categories: Category[]): Draft {
+  const stored = readDayDraft();
+  const key = day?.date || "";
+  if (stored && (stored.day?.date || "") === key) {
+    return {
+      originalDate: stored.originalDate || key,
+      date: stored.date,
+      review: stored.review,
+      pendingCount: stored.pendingCount,
+      declared: stored.declared,
+      counts: stored.counts,
+      phones: stored.phones,
+    };
+  }
+  return fromDay(day, categories);
 }
 
 function fromDay(day: DayRecord | null, categories: Category[]): Draft {

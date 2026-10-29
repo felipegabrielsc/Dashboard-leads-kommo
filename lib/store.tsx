@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { slugify } from "./categories";
+import { readDayDraft } from "./dayDraft";
 import { formatDate } from "./format";
 import { seedState } from "./normalize";
 import {
@@ -302,6 +303,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     function onFocus() {
       const client = clientRef.current;
       if (!client || !ready || writes.current > 0) return;
+      if (readDayDraft()?.open) return;
       if (Date.now() - lastFocusLoad.current < 60_000) return;
       lastFocusLoad.current = Date.now();
       fetchState(client)

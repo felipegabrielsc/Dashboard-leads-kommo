@@ -142,7 +142,7 @@ export function V4Import() {
 
   return (
     <KommoShell
-      title="Importações V4"
+      title="Importações"
       description="A planilha entra inteira, com primeira compra e recompra classificadas pelo número da compra. Só a recompra não conciliada soma na receita consolidada."
       active="importacoes"
       painelHref={painelHref}

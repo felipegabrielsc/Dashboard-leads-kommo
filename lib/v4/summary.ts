@@ -72,7 +72,7 @@ export async function loadV4Summary(
         ready: true,
         kommoRevenue,
         consolidatedRevenue: kommoRevenue,
-        note: "Não consegui ler as vendas V4.",
+        note: "Não consegui ler as recompras.",
       });
     }
     const batch = batchResult.data?.[0];
@@ -90,7 +90,7 @@ export async function loadV4Summary(
         kommoRevenue,
         consolidatedRevenue: kommoRevenue,
         batch: batchView,
-        note: "Não consegui ler as vendas V4 deste período.",
+        note: "Não consegui ler as recompras deste período.",
       });
     }
     const rows: PurchaseSlice[] = (salesResult.data || []).map((row) => ({
@@ -111,6 +111,6 @@ export async function loadV4Summary(
     };
   } catch (error) {
     if (relationMissing(error)) return emptySummary({ kommoRevenue, consolidatedRevenue: kommoRevenue });
-    return emptySummary({ ready: true, kommoRevenue, consolidatedRevenue: kommoRevenue, note: "Não consegui ler as vendas V4." });
+    return emptySummary({ ready: true, kommoRevenue, consolidatedRevenue: kommoRevenue, note: "Não consegui ler as recompras." });
   }
 }
