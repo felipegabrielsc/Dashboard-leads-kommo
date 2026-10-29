@@ -149,23 +149,22 @@ begin
       and l.closed_at is not null
       and (l.closed_at at time zone 'America/Sao_Paulo')::date between p_from and p_to
     group by 1
+  ),
+  keys as (
+    select key from created
+    union
+    select key from won
   )
   select coalesce(jsonb_agg(jsonb_build_object(
-    'key', key,
-    'leads', leads,
-    'sales', sales,
-    'revenue', revenue
-  ) order by key), '[]'::jsonb)
+    'key', k.key,
+    'leads', coalesce(c.leads, 0),
+    'sales', coalesce(w.sales, 0),
+    'revenue', coalesce(w.revenue, 0)
+  ) order by k.key), '[]'::jsonb)
   into v_series
-  from (
-    select
-      coalesce(c.key, w.key) as key,
-      coalesce(c.leads, 0) as leads,
-      coalesce(w.sales, 0) as sales,
-      coalesce(w.revenue, 0) as revenue
-    from created c
-    full outer join won w on w.key = c.key
-  ) buckets;
+  from keys k
+  left join created c on c.key = k.key
+  left join won w on w.key = k.key;
 
   with created as (
     select l.responsible_user_id as user_id, count(*)::int as leads
@@ -190,19 +189,25 @@ begin
       and (l.closed_at at time zone 'America/Sao_Paulo')::date between p_from and p_to
     group by 1
   ),
+  people as (
+    select user_id from created
+    union
+    select user_id from won
+  ),
   rows as (
     select
-      coalesce(c.user_id, w.user_id) as id,
+      p.user_id as id,
       coalesce(nullif(u.name, ''), 'Sem responsável') as seller_name,
       coalesce(c.leads, 0) as leads,
       coalesce(w.sales, 0) as sales,
       coalesce(w.revenue, 0)::float8 as revenue,
       case when coalesce(c.leads, 0) = 0 then null else coalesce(w.sales, 0)::float8 / c.leads end as conversion
-    from created c
-    full outer join won w on w.user_id is not distinct from c.user_id
+    from people p
+    left join created c on c.user_id is not distinct from p.user_id
+    left join won w on w.user_id is not distinct from p.user_id
     left join public.kommo_users u
       on u.account_id = p_account_id
-     and u.id = coalesce(c.user_id, w.user_id)
+     and u.id = p.user_id
   )
   select coalesce(jsonb_agg(jsonb_build_object(
     'id', id,

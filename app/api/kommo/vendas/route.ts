@@ -2,6 +2,7 @@ import { commercialReader } from "@/lib/kommo/access";
 import { privateJson } from "@/lib/kommo/http";
 import { loadPagedSales } from "@/lib/kommo/reportQuery";
 import { readCommercial } from "@/lib/kommo/read";
+import { loadRepurchaseAudit } from "@/lib/v4/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -14,14 +15,10 @@ export async function GET(request: Request) {
   const read = await readCommercial(reader.supabase, search);
   if (!read.ok) return privateJson({ error: read.error }, read.status);
   const page = Math.max(1, Math.floor(Number(search.get("page")) || 1));
-  const paged = await loadPagedSales(
-    reader.supabase,
-    search,
-    read.report?.sales || [],
-    read.aggregated,
-    page,
-    PAGE_SIZE,
-  );
+  const [paged, repurchases] = await Promise.all([
+    loadPagedSales(reader.supabase, search, read.report?.sales || [], read.aggregated, page, PAGE_SIZE),
+    loadRepurchaseAudit(reader.supabase, search, read.users),
+  ]);
   return privateJson({
     ...read,
     report: undefined,
@@ -31,5 +28,6 @@ export async function GET(request: Request) {
     matchTotal: paged.matchTotal,
     page: paged.page,
     pageSize: paged.pageSize,
+    repurchases,
   });
 }

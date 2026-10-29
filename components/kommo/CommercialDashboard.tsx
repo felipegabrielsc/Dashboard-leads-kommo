@@ -15,6 +15,7 @@ import { SalesTable } from "./SalesTable";
 import { SetupChecklist } from "./SetupChecklist";
 import { SyncStatus } from "./SyncStatus";
 import { V4Panel } from "./V4Panel";
+import { readViewCache, writeViewCache } from "@/lib/kommo/viewCache";
 import { commercialSearch } from "./query";
 import { useCommercialQuery } from "./useCommercialQuery";
 
@@ -72,14 +73,23 @@ export function CommercialDashboard() {
 
   useEffect(() => {
     const controller = new AbortController();
-    setLoading(true);
     const search = commercialSearch({
       from: query.from,
       to: query.to,
       pipeline: query.pipeline,
       user: query.user,
     });
-    fetch(`/api/kommo/dashboard?${search}`, { signal: controller.signal, cache: "no-store" })
+    const url = `/api/kommo/dashboard?${search}`;
+    const cached = readViewCache<DashboardResponse>(url);
+    if (cached) {
+      setData(cached);
+      setStatus(200);
+      setFailure("");
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+    fetch(url, { signal: controller.signal, cache: "no-store" })
       .then(async (response) => {
         const body = await response.json().catch(() => ({}));
         if (controller.signal.aborted) return;
@@ -92,6 +102,7 @@ export function CommercialDashboard() {
         setStatus(200);
         setFailure("");
         setData(body as DashboardResponse);
+        writeViewCache(url, body);
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;

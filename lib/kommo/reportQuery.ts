@@ -10,6 +10,9 @@ import type { CommercialFilters, CommercialReport, SaleRow, StatusKind } from ".
 const INSTALL_NOTICE =
   "A leitura ainda percorre todos os negócios antes de filtrar. Execute supabase/kommo-relatorios.sql no SQL Editor para calcular os indicadores no banco.";
 
+const UPDATE_NOTICE =
+  "A consulta comercial no Supabase está desatualizada. Execute novamente supabase/kommo-relatorios.sql no SQL Editor. Até lá, a tela percorre todos os negócios e demora mais para abrir.";
+
 type FastReport = {
   ok: true;
   report: CommercialReport;
@@ -157,7 +160,9 @@ export async function queryCommercialReport(
     p_grain: reportGrain(filters),
   });
   if (error) {
-    return { ok: false, notice: rpcMissing(error) ? INSTALL_NOTICE : errorText(error) || INSTALL_NOTICE };
+    const text = errorText(error);
+    const notice = rpcMissing(error) ? INSTALL_NOTICE : /full join|0a000/i.test(text) ? UPDATE_NOTICE : INSTALL_NOTICE;
+    return { ok: false, notice };
   }
   const parsed = reportOf(data, filters);
   if (!parsed) return { ok: false, notice: INSTALL_NOTICE };

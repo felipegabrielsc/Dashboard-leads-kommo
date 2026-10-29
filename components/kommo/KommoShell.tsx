@@ -38,7 +38,7 @@ export function KommoShell({
             </Link>
             {item(painelHref, "Comercial Kommo", active === "painel")}
             {item(vendasHref, "Vendas", active === "vendas")}
-            {item(importHref, "Importações V4", active === "importacoes")}
+            {item(importHref, "Importações", active === "importacoes")}
             {item("/kommo/configuracoes", "Configurações", active === "config")}
           </div>
           <h1 className="mt-4 font-serif text-4xl leading-none">{title}</h1>
