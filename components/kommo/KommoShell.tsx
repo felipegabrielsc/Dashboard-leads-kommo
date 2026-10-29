@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-type Active = "painel" | "vendas" | "config";
+type Active = "painel" | "vendas" | "config" | "importacoes";
 
 export function KommoShell({
   title,
@@ -8,6 +8,7 @@ export function KommoShell({
   active,
   painelHref,
   vendasHref,
+  importHref = "/kommo/importacoes",
   children,
 }: {
   title: string;
@@ -15,6 +16,7 @@ export function KommoShell({
   active: Active;
   painelHref: string;
   vendasHref: string;
+  importHref?: string;
   children: React.ReactNode;
 }) {
   const item = (href: string, label: string, on: boolean) =>
@@ -36,6 +38,7 @@ export function KommoShell({
             </Link>
             {item(painelHref, "Comercial Kommo", active === "painel")}
             {item(vendasHref, "Vendas", active === "vendas")}
+            {item(importHref, "Importações V4", active === "importacoes")}
             {item("/kommo/configuracoes", "Configurações", active === "config")}
           </div>
           <h1 className="mt-4 font-serif text-4xl leading-none">{title}</h1>

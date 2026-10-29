@@ -25,6 +25,7 @@ type SalesResponse = {
   matchTotal: number;
   page: number;
   pageSize: number;
+  notice: string;
   error: string;
 };
 
@@ -83,6 +84,7 @@ export function SalesAudit() {
 
   const painelHref = `/kommo?${query.query}`;
   const vendasHref = `/kommo/vendas?${query.query}`;
+  const importHref = `/kommo/importacoes?${query.query}`;
   const pages = data ? Math.max(1, Math.ceil(data.matchTotal / data.pageSize)) : 1;
   const blocked = status === 503 || Boolean(data && (!data.configured || !data.tablesReady));
 
@@ -93,6 +95,7 @@ export function SalesAudit() {
       active="vendas"
       painelHref={painelHref}
       vendasHref={vendasHref}
+      importHref={importHref}
     >
       {status === 401 ? (
         <section className="panel p-5">
@@ -104,6 +107,7 @@ export function SalesAudit() {
       ) : null}
       {blocked ? <SetupChecklist message={failure || data?.error} /> : null}
       {data && !blocked ? <SyncStatus sync={data.sync} provisional={data.provisional} error={data.error} /> : null}
+      {data && !blocked && data.notice ? <p className="rounded-2xl border border-line bg-card px-4 py-3 text-sm text-mute">{data.notice}</p> : null}
       <DashboardFilters
         from={query.from}
         to={query.to}
