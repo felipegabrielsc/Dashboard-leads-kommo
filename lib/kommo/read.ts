@@ -3,6 +3,7 @@ import { kommoCredentials } from "./client";
 import { explainKommoDb, kommoStore, loadAccountSnapshot } from "./db";
 import { parseCommercialFilters } from "./filters";
 import { buildCommercialReport } from "./metrics";
+import { loadFilterLists, queryCommercialReport } from "./reportQuery";
 import type { CommercialReport, PublicSync } from "./types";
 import type { SyncStateRow } from "./sync";
 
@@ -18,6 +19,9 @@ export type CommercialRead =
       pipelines: { id: number; name: string }[];
       users: { id: number; name: string }[];
       report: CommercialReport | null;
+      salesTotal: number;
+      aggregated: boolean;
+      notice: string;
       error: string;
     };
 
@@ -47,6 +51,9 @@ function emptyRead(partial: {
     pipelines: [],
     users: [],
     report: null,
+    salesTotal: 0,
+    aggregated: false,
+    notice: "",
     sync: partial.sync || null,
     ...partial,
   };
@@ -71,17 +78,42 @@ export async function readCommercial(supabase: SupabaseClient, search: URLSearch
         error: "",
       });
     }
+    const provisional = !state.fullReconcileAt || state.phase !== "idle";
+    const sync = publicSync(state);
+    const fast = await queryCommercialReport(supabase, state.accountId, filters);
+    if (fast.ok) {
+      const lists = await loadFilterLists(supabase, state.accountId);
+      return {
+        ok: true,
+        configured: true,
+        tablesReady: true,
+        subdomain: credentials.subdomain,
+        provisional,
+        sync,
+        pipelines: lists.pipelines,
+        users: lists.users,
+        report: fast.report,
+        salesTotal: fast.salesTotal,
+        aggregated: true,
+        notice: "",
+        error: "",
+      };
+    }
     const snapshot = await loadAccountSnapshot(supabase, state.accountId);
+    const report = buildCommercialReport(snapshot.leads, snapshot.stages, filters);
     return {
       ok: true,
       configured: true,
       tablesReady: true,
       subdomain: credentials.subdomain,
-      provisional: !state.fullReconcileAt || state.phase !== "idle",
-      sync: publicSync(state),
+      provisional,
+      sync,
       pipelines: snapshot.pipelines,
       users: snapshot.users,
-      report: buildCommercialReport(snapshot.leads, snapshot.stages, filters),
+      report,
+      salesTotal: report.sales.length,
+      aggregated: false,
+      notice: fast.notice,
       error: "",
     };
   } catch (error) {

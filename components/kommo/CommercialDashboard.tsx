@@ -1,21 +1,32 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { formatBrl, formatDate, formatInt, formatPct } from "@/lib/format";
 import { exampleFilters, exampleReport } from "@/lib/kommo/sample";
 import type { CommercialReport, PublicSync, SaleRow } from "@/lib/kommo/types";
+import type { V4SummaryView } from "@/lib/v4/types";
 import { DashboardFilters } from "./DashboardFilters";
 import { FunnelChart } from "./FunnelChart";
 import { KommoShell } from "./KommoShell";
 import { MetricCard } from "./MetricCard";
-import { SalesChart } from "./SalesChart";
 import { SalesTable } from "./SalesTable";
-import { SellersRanking } from "./SellersRanking";
 import { SetupChecklist } from "./SetupChecklist";
 import { SyncStatus } from "./SyncStatus";
+import { V4Panel } from "./V4Panel";
 import { commercialSearch } from "./query";
 import { useCommercialQuery } from "./useCommercialQuery";
+
+const SalesChart = dynamic(() => import("./SalesChart").then((mod) => mod.SalesChart), {
+  ssr: false,
+  loading: () => <p className="panel p-5 text-sm text-mute">Carregando o gráfico…</p>,
+});
+
+const SellersRanking = dynamic(() => import("./SellersRanking").then((mod) => mod.SellersRanking), {
+  ssr: false,
+  loading: () => <p className="panel p-5 text-sm text-mute">Carregando o ranking…</p>,
+});
 
 type ReportView = {
   metrics: CommercialReport["metrics"];
@@ -35,6 +46,8 @@ type DashboardResponse = {
   pipelines: { id: number; name: string }[];
   users: { id: number; name: string }[];
   report: ReportView | null;
+  notice: string;
+  v4: V4SummaryView | null;
   error: string;
 };
 
@@ -94,6 +107,7 @@ export function CommercialDashboard() {
   const report = sample ? preview(exampleReport()) : data?.report || null;
   const painelHref = `/kommo?${query.query}`;
   const vendasHref = `/kommo/vendas?${query.query}`;
+  const importHref = `/kommo/importacoes?${query.query}`;
   const shownFrom = sample ? exampleFilters.from : query.from;
   const shownTo = sample ? exampleFilters.to : query.to;
 
@@ -104,6 +118,7 @@ export function CommercialDashboard() {
       active="painel"
       painelHref={painelHref}
       vendasHref={vendasHref}
+      importHref={importHref}
     >
       {status === 401 ? (
         <section className="panel p-5">
@@ -137,10 +152,12 @@ export function CommercialDashboard() {
           </Link>
         </section>
       ) : null}
+      {!sample && !report && data?.v4 ? <V4Panel summary={data.v4} importHref={importHref} /> : null}
 
       {report ? (
         <>
           {!sample && data ? <SyncStatus sync={data.sync} provisional={data.provisional} error={data.error} /> : null}
+          {!sample && data?.notice ? <p className="rounded-2xl border border-line bg-card px-4 py-3 text-sm text-mute">{data.notice}</p> : null}
           <DashboardFilters
             from={shownFrom}
             to={shownTo}
@@ -214,6 +231,7 @@ export function CommercialDashboard() {
               vendas do período.
             </p>
           ) : null}
+          {!sample && data?.v4 ? <V4Panel summary={data.v4} importHref={importHref} /> : null}
           <div className="grid min-w-0 gap-3 xl:grid-cols-2">
             <SalesChart series={report.series} grain={report.grain} />
             <SellersRanking sellers={report.sellers} />

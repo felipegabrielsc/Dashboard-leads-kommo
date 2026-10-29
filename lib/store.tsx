@@ -197,6 +197,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const clientRef = useRef<SupabaseClient | null>(null);
   const stateRef = useRef(state);
   const writes = useRef(0);
+  const lastFocusLoad = useRef(0);
   stateRef.current = state;
 
   async function run(task: (client: SupabaseClient) => Promise<void>) {
@@ -255,6 +256,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
       if (cancel) return;
       dispatch({ type: "replace", state: loaded });
+      lastFocusLoad.current = Date.now();
       setReady(true);
       fetchChanges(active)
         .then((entries) => {
@@ -300,6 +302,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     function onFocus() {
       const client = clientRef.current;
       if (!client || !ready || writes.current > 0) return;
+      if (Date.now() - lastFocusLoad.current < 60_000) return;
+      lastFocusLoad.current = Date.now();
       fetchState(client)
         .then((fresh) => {
           if (writes.current > 0) return;

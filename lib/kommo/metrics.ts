@@ -62,10 +62,14 @@ function bucketKey(day: string, grain: CommercialReport["grain"]): string {
   return day;
 }
 
-function bucketLabel(key: string, grain: CommercialReport["grain"]): string {
+export function seriesLabel(key: string, grain: CommercialReport["grain"]): string {
   if (grain === "month") return formatMonth(key);
   const [, month, day] = key.split("-");
   return `${day}/${month}`;
+}
+
+function bucketLabel(key: string, grain: CommercialReport["grain"]): string {
+  return seriesLabel(key, grain);
 }
 
 function ratio(part: number, total: number): number | null {

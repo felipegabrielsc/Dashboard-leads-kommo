@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "tsx lib/metrics.test.ts && tsx lib/parseSheet.test.ts && tsx lib/quotes.test.ts && tsx lib/catalogPdf.test.ts && tsx lib/kommo/metrics.test.ts && tsx lib/kommo/sync.test.ts"
+    "test": "tsx lib/metrics.test.ts && tsx lib/parseSheet.test.ts && tsx lib/quotes.test.ts && tsx lib/catalogPdf.test.ts && tsx lib/kommo/metrics.test.ts && tsx lib/kommo/sync.test.ts && tsx lib/kommo/salesPage.test.ts && tsx lib/v4/parse.test.ts && tsx lib/v4/consolidate.test.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
