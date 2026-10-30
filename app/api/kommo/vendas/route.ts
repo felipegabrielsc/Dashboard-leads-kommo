@@ -1,4 +1,4 @@
-import { commercialReader } from "@/lib/kommo/access";
+import { commercialViewer } from "@/lib/kommo/access";
 import { privateJson } from "@/lib/kommo/http";
 import { loadPagedSales } from "@/lib/kommo/reportQuery";
 import { readCommercial } from "@/lib/kommo/read";
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 const PAGE_SIZE = 50;
 
 export async function GET(request: Request) {
-  const reader = await commercialReader();
+  const reader = await commercialViewer();
   if ("error" in reader) return privateJson({ error: reader.error }, reader.status);
   const search = new URL(request.url).searchParams;
   const read = await readCommercial(reader.supabase, search);

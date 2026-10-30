@@ -13,6 +13,9 @@ const INSTALL_NOTICE =
 const UPDATE_NOTICE =
   "A consulta comercial no Supabase está desatualizada. Execute novamente supabase/kommo-relatorios.sql no SQL Editor. Até lá, a tela percorre todos os negócios e demora mais para abrir.";
 
+const PUBLIC_READ_NOTICE =
+  "O Supabase ainda não libera esta leitura para quem não entrou. Execute supabase/kommo-leitura-publica.sql no SQL Editor.";
+
 type FastReport = {
   ok: true;
   report: CommercialReport;
@@ -161,7 +164,13 @@ export async function queryCommercialReport(
   });
   if (error) {
     const text = errorText(error);
-    const notice = rpcMissing(error) ? INSTALL_NOTICE : /full join|0a000/i.test(text) ? UPDATE_NOTICE : INSTALL_NOTICE;
+    const notice = rpcMissing(error)
+      ? INSTALL_NOTICE
+      : /permission denied|42501/i.test(text)
+        ? PUBLIC_READ_NOTICE
+        : /full join|0a000/i.test(text)
+          ? UPDATE_NOTICE
+          : INSTALL_NOTICE;
     return { ok: false, notice };
   }
   const parsed = reportOf(data, filters);

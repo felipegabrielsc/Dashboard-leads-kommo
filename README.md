@@ -43,11 +43,12 @@ Preencha `.env.local` com a URL e a chave anon do projeto.
 
 ## Comercial Kommo
 
-A rota `/kommo` é uma segunda dashboard. Ela lê negócios, funis e usuários da API do Kommo, guarda tudo em tabelas próprias e exige login. A tela de leads diários, os orçamentos e o histórico continuam como estão.
+A rota `/kommo` é uma segunda dashboard. Ela lê negócios, funis e usuários da API do Kommo e guarda tudo em tabelas próprias. Comercial e Vendas abrem sem login. Configurações e Importações continuam exigindo a conta. A tela de leads diários, os orçamentos e o histórico continuam como estão.
 
 1. No Kommo, crie uma integração com token de longa duração e permissão para leads, funis e usuários. O subdomínio é o trecho antes de `.kommo.com`.
 2. No SQL Editor do Supabase, execute `supabase/kommo.sql` depois do schema atual. Esse arquivo não altera as tabelas dos lançamentos.
 3. Na Vercel, além das chaves públicas, preencha `KOMMO_SUBDOMAIN`, `KOMMO_ACCESS_TOKEN`, `SUPABASE_SERVICE_ROLE_KEY` e `CRON_SECRET`. Faça um novo deploy depois de salvar.
 4. Entre no site, abra Comercial Kommo e, em Configurações, clique em Trazer histórico. A leitura diária das 8h (horário de São Paulo) só passa a valer depois dessa primeira importação e com a chave service role presente.
 5. Execute `supabase/kommo-relatorios.sql` para os indicadores e a auditoria de vendas serem calculados no banco. Sem esse arquivo, a tela continua correta e avisa que ainda percorre todos os negócios.
-6. Execute `supabase/v4-vendas.sql` e use Importações para trazer a planilha. Se o comercial mostrar que a consulta está desatualizada, execute `supabase/kommo-relatorios.sql` de novo. Recompra é o número da compra maior que 1. A receita consolidada soma os negócios ganhos do Kommo com as recompras que ninguém marcou como já registradas no CRM. Uma planilha nova substitui a anterior. O mesmo arquivo, se já estiver ativo, não é somado de novo.
+6. Execute `supabase/kommo-leitura-publica.sql` para Comercial e Vendas abrirem sem login.
+7. Execute `supabase/v4-vendas.sql` e use Importações para trazer a planilha. Se o comercial mostrar que a consulta está desatualizada, execute `supabase/kommo-relatorios.sql` de novo. Recompra é o número da compra maior que 1. A receita consolidada soma os negócios ganhos do Kommo com as recompras que ninguém marcou como já registradas no CRM. Uma planilha nova substitui a anterior. O mesmo arquivo, se já estiver ativo, não é somado de novo.

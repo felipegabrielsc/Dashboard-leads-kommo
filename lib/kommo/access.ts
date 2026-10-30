@@ -1,12 +1,18 @@
 import { createSupabaseServer, createSupabaseService } from "../supabaseServer";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export async function commercialReader(): Promise<{ supabase: SupabaseClient } | { error: string; status: number }> {
+export async function commercialViewer(): Promise<{ supabase: SupabaseClient } | { error: string; status: number }> {
   const supabase = await createSupabaseServer();
   if (!supabase) return { error: "O Supabase ainda não está configurado.", status: 503 };
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) return { error: "Entre para ver o comercial.", status: 401 };
   return { supabase };
+}
+
+export async function commercialReader(): Promise<{ supabase: SupabaseClient } | { error: string; status: number }> {
+  const viewer = await commercialViewer();
+  if ("error" in viewer) return viewer;
+  const { data } = await viewer.supabase.auth.getUser();
+  if (!data.user) return { error: "Entre para ver o comercial.", status: 401 };
+  return viewer;
 }
 
 export function cronAuthorized(request: Request): boolean {

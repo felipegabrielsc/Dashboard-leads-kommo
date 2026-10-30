@@ -418,9 +418,9 @@ end;
 $$;
 
 revoke all on function public.kommo_commercial_report(bigint, date, date, bigint, bigint, text) from public;
-revoke all on function public.kommo_commercial_report(bigint, date, date, bigint, bigint, text) from anon;
+grant execute on function public.kommo_commercial_report(bigint, date, date, bigint, bigint, text) to anon;
 grant execute on function public.kommo_commercial_report(bigint, date, date, bigint, bigint, text) to authenticated;
 
 revoke all on function public.kommo_commercial_sales(bigint, date, date, bigint, bigint, text, integer, integer) from public;
-revoke all on function public.kommo_commercial_sales(bigint, date, date, bigint, bigint, text, integer, integer) from anon;
+grant execute on function public.kommo_commercial_sales(bigint, date, date, bigint, bigint, text, integer, integer) to anon;
 grant execute on function public.kommo_commercial_sales(bigint, date, date, bigint, bigint, text, integer, integer) to authenticated;

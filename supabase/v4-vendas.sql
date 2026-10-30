@@ -69,6 +69,9 @@ begin
     execute format('create policy "authenticated update %1$s" on public.%1$s for update to authenticated using (true) with check (true)', tbl);
     execute format('create policy "authenticated delete %1$s" on public.%1$s for delete to authenticated using (true)', tbl);
     execute format('revoke all on public.%1$s from anon', tbl);
+    execute format('drop policy if exists "public read %1$s" on public.%1$s', tbl);
+    execute format('create policy "public read %1$s" on public.%1$s for select to anon using (true)', tbl);
+    execute format('grant select on public.%1$s to anon', tbl);
     execute format('grant select, insert, update, delete on public.%1$s to authenticated', tbl);
     execute format('grant select, insert, update, delete on public.%1$s to service_role', tbl);
   end loop;
