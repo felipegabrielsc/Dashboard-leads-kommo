@@ -1,6 +1,6 @@
 -- Comercial Kommo. Rode no SQL Editor, mesmo que o schema.sql já tenha sido executado.
 -- Estas tabelas não mexem nos lançamentos, orçamentos ou histórico atuais.
--- Só quem está logado lê. A sincronização grava com a sessão de quem clicou, ou com a service role no agendamento.
+-- Comercial e Vendas podem ser lidos sem login. Gravação, logs de sincronização, configurações e importação continuam só para quem está logado. A sincronização grava com a sessão de quem clicou, ou com a service role no agendamento.
 
 create table if not exists public.kommo_pipelines (
   account_id bigint not null,
@@ -118,6 +118,11 @@ begin
     execute format('create policy "authenticated delete %1$s" on public.%1$s for delete to authenticated using (true)', tbl);
     execute format('revoke all on public.%1$s from anon', tbl);
     execute format('grant select, insert, update, delete on public.%1$s to authenticated', tbl);
+    if tbl <> 'kommo_sync_logs' then
+      execute format('drop policy if exists "public read %1$s" on public.%1$s', tbl);
+      execute format('create policy "public read %1$s" on public.%1$s for select to anon using (true)', tbl);
+      execute format('grant select on public.%1$s to anon', tbl);
+    end if;
   end loop;
 end $$;
 

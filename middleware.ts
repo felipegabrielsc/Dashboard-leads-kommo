@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { kommoGate } from "@/lib/kommo/gate";
 
 function safeNext(raw: string | null): URL | null {
   if (!raw || !raw.startsWith("/") || raw.startsWith("//") || raw.startsWith("/login")) return null;
@@ -34,20 +35,18 @@ export async function middleware(request: NextRequest) {
   const { data } = await supabase.auth.getUser();
   const path = request.nextUrl.pathname;
   const isLogin = path.startsWith("/login");
-  const isKommoPage = path === "/kommo" || path.startsWith("/kommo/");
-  const isKommoApi = path.startsWith("/api/kommo");
-  const isCron = request.method === "GET" && path === "/api/kommo/sync";
+  const gate = kommoGate(path, request.method, Boolean(data.user));
 
-  if (!data.user && isKommoPage) {
+  if (gate === "login") {
     const redirect = request.nextUrl.clone();
     redirect.pathname = "/login";
     redirect.search = `?next=${encodeURIComponent(`${path}${request.nextUrl.search}`)}`;
     return NextResponse.redirect(redirect);
   }
 
-  if (!data.user && isKommoApi && !isCron) {
+  if (gate === "unauthorized") {
     return NextResponse.json(
-      { error: "Entre para ver o comercial." },
+      { error: "Entre para usar esta parte do comercial." },
       { status: 401, headers: { "Cache-Control": "private, no-store" } },
     );
   }

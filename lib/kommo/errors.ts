@@ -22,7 +22,7 @@ export function explainKommoDb(error: unknown): string {
     return "As etapas se repetem entre os funis. Execute supabase/kommo.sql de novo no SQL Editor e clique em Continuar.";
   }
   if (/row-level security|permission denied|42501/i.test(text)) {
-    return "O Supabase recusou a gravação do comercial. Execute supabase/kommo.sql de novo no SQL Editor e confira a chave service role na Vercel.";
+    return "O Supabase recusou o acesso ao comercial. Execute supabase/kommo-leitura-publica.sql para a tela abrir sem login. Se a falha foi na sincronização, confira a chave service role na Vercel.";
   }
   return text;
 }
