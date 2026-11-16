@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { QuoteBatchPdf } from "@/components/QuoteBatchPdf";
 import { QuoteCatalog } from "@/components/QuoteCatalog";
 import { QuoteForm } from "@/components/QuoteForm";
 import { formatBrl, formatInt } from "@/lib/format";
@@ -40,7 +41,9 @@ export function QuotesPanel({
   const [family, setFamily] = useState<"" | QuoteFamily>("");
   const [notice, setNotice] = useState("");
   const [localError, setLocalError] = useState("");
-  const [view, setView] = useState<"lista" | "catalogo">("lista");
+  const [view, setView] = useState<"lista" | "catalogo" | "pedido">("lista");
+  const [batchText, setBatchText] = useState("");
+  const [batchClient, setBatchClient] = useState("");
   const [catalogPrices, setCatalogPrices] = useState(true);
   const [form, setForm] = useState<{ title: string; initialId: string; draft: ReturnType<typeof emptyQuoteDraft> } | null>(
     null,
@@ -124,7 +127,7 @@ export function QuotesPanel({
               Orçamentos
             </h2>
             <p className="mt-1 max-w-xl text-sm text-mute">
-              Pesquise e cadastre em milímetros. O catálogo sai em centímetros. Corte e vinco fica separado das caixas comuns, no mesmo PDF.
+              Pesquise e cadastre em milímetros. O catálogo sai em centímetros. Em PDF de um txt, o pedido baixa e não entra na lista.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -137,6 +140,9 @@ export function QuotesPanel({
             </button>
             <button type="button" className="btn" onClick={() => fileRef.current?.click()}>
               Importar txt
+            </button>
+            <button type="button" className="btn" onClick={() => setView("pedido")}>
+              PDF de um txt
             </button>
             <button
               type="button"
@@ -177,7 +183,7 @@ export function QuotesPanel({
             onSubmit={(event) => {
               event.preventDefault();
               onSaveProfile(identity);
-              setNotice("Nome, WhatsApp e validade entram nos dois PDFs.");
+              setNotice("Nome, WhatsApp e validade entram nos PDFs.");
               setLocalError("");
             }}
           >
@@ -213,6 +219,7 @@ export function QuotesPanel({
               Salvar no PDF
             </button>
           </form>
+          {view !== "pedido" && (
           <label className="block text-sm">
             Pesquisar
             <input
@@ -223,6 +230,9 @@ export function QuotesPanel({
               onChange={(event) => setQuery(event.target.value)}
             />
           </label>
+          )}
+          {view !== "pedido" && (
+          <>
           <div className="flex flex-wrap gap-2">
             <button type="button" className={`chip ${family === "" ? "chip-on" : ""}`} onClick={() => setFamily("")}>
               Todos os tipos
@@ -266,9 +276,11 @@ export function QuotesPanel({
               </button>
             )}
           </div>
+          </>
+          )}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm text-mute">
-              {formatInt(visible.length)} de {formatInt(quotes.length)} orçamentos
+              {view === "pedido" ? "O texto abaixo não é gravado." : `${formatInt(visible.length)} de ${formatInt(quotes.length)} orçamentos`}
             </p>
             <div className="flex gap-2">
               <button type="button" className={`chip ${view === "lista" ? "chip-on" : ""}`} onClick={() => setView("lista")}>
@@ -281,6 +293,13 @@ export function QuotesPanel({
               >
                 Catálogo
               </button>
+              <button
+                type="button"
+                className={`chip ${view === "pedido" ? "chip-on" : ""}`}
+                onClick={() => setView("pedido")}
+              >
+                PDF de um txt
+              </button>
             </div>
           </div>
           {(localError || error) && <p className="text-sm text-wine">{localError || error}</p>}
@@ -288,7 +307,7 @@ export function QuotesPanel({
         </div>
 
         <div className="overflow-y-auto px-5 py-4">
-          {form && (
+          {view !== "pedido" && form && (
             <div className="mb-4">
               <QuoteForm
                 materials={materials}
@@ -299,13 +318,21 @@ export function QuotesPanel({
               />
             </div>
           )}
-          {!quotes.length && !form && (
+          {view !== "pedido" && !quotes.length && !form && (
             <p className="text-sm text-mute">Nenhum orçamento ainda. Cadastre uma medida ou importe o txt.</p>
           )}
-          {quotes.length > 0 && !visible.length && (
+          {view !== "pedido" && quotes.length > 0 && !visible.length && (
             <p className="text-sm text-mute">Nenhuma caixa com essa medida ou esse papelão.</p>
           )}
-          {view === "catalogo" ? (
+          {view === "pedido" ? (
+            <QuoteBatchPdf
+              text={batchText}
+              clientName={batchClient}
+              identity={identity}
+              onText={setBatchText}
+              onClientName={setBatchClient}
+            />
+          ) : view === "catalogo" ? (
             <QuoteCatalog quotes={visible} filtered={filtered} prices={catalogPrices} onPrices={setCatalogPrices} />
           ) : (
           <div className="space-y-6">
