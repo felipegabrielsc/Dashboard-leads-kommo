@@ -22,6 +22,12 @@ assert.equal(catalogFilename(generatedAt, "medidas"), "catalogo-medidas-2026-10-
 assert.equal(quoteBatchFilename(generatedAt), "orcamento-2026-10-13.pdf");
 assert.equal(quoteBatchFilename(generatedAt, "José da Silva"), "orcamento-jose-da-silva-2026-10-13.pdf");
 
+const pasted = parseQuotes(readFileSync(new URL("../data/pedido-asteriscos.txt", import.meta.url), "utf8"));
+const pastedPdf = buildCatalogPdf(pasted, { generatedAt, document: "pedido", clientName: "Pedido" });
+assert.equal(pasted.length, 25);
+assert.ok(pastedPdf.getNumberOfPages() >= 2);
+assert.equal(Buffer.from(pastedPdf.output("arraybuffer")).subarray(0, 5).toString(), "%PDF-");
+
 const batch = buildCatalogPdf(quotes.slice(0, 24), {
   generatedAt,
   document: "pedido",
