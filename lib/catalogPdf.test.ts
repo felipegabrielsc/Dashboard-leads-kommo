@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { buildCatalogPdf, catalogFilename } from "./catalogPdf";
+import { buildCatalogPdf, catalogFilename, quoteBatchFilename } from "./catalogPdf";
 import { parseQuotes } from "./quotes";
 
 const quotes = parseQuotes(readFileSync(new URL("../data/medidas-de-exemplo.txt", import.meta.url), "utf8"));
@@ -19,6 +19,17 @@ assert.equal(empty.getNumberOfPages(), 1);
 
 assert.equal(catalogFilename(generatedAt), "catalogo-caixas-2026-10-13.pdf");
 assert.equal(catalogFilename(generatedAt, "medidas"), "catalogo-medidas-2026-10-13.pdf");
+assert.equal(quoteBatchFilename(generatedAt), "orcamento-2026-10-13.pdf");
+assert.equal(quoteBatchFilename(generatedAt, "José da Silva"), "orcamento-jose-da-silva-2026-10-13.pdf");
+
+const batch = buildCatalogPdf(quotes.slice(0, 24), {
+  generatedAt,
+  document: "pedido",
+  clientName: "Maria",
+  identity: { companyName: "Casa", whatsapp: "5511999999999", validUntil: "2026-12-31" },
+});
+assert.ok(batch.getNumberOfPages() >= 1);
+assert.equal(Buffer.from(batch.output("arraybuffer")).subarray(0, 5).toString(), "%PDF-");
 
 const measures = buildCatalogPdf(quotes, { generatedAt, kind: "medidas" });
 assert.ok(measures.getNumberOfPages() >= 1);

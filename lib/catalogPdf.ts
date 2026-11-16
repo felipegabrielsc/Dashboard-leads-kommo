@@ -132,6 +132,24 @@ export function catalogFilename(date = new Date(), kind: CatalogKind = "precos")
   return `${prefix}-${year}-${month}-${day}.pdf`;
 }
 
+function fileSlug(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+}
+
+export function quoteBatchFilename(date = new Date(), clientName = ""): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const slug = fileSlug(clientName);
+  return slug ? `orcamento-${slug}-${year}-${month}-${day}.pdf` : `orcamento-${year}-${month}-${day}.pdf`;
+}
+
 function contactLine(identity: CatalogIdentity): string {
   const parts: string[] = [];
   const phone = identity.whatsapp.trim();
@@ -142,7 +160,14 @@ function contactLine(identity: CatalogIdentity): string {
 
 export function buildCatalogPdf(
   quotes: Quote[],
-  options?: { filtered?: boolean; generatedAt?: Date; kind?: CatalogKind; identity?: CatalogIdentity },
+  options?: {
+    filtered?: boolean;
+    generatedAt?: Date;
+    kind?: CatalogKind;
+    identity?: CatalogIdentity;
+    document?: "catalogo" | "pedido";
+    clientName?: string;
+  },
 ): jsPDF {
   const showPrices = options?.kind !== "medidas";
   const identity = options?.identity ?? emptyCatalogIdentity;
@@ -166,28 +191,48 @@ export function buildCatalogPdf(
   }
 
   function paintHeader(): number {
+    const isBatch = options?.document === "pedido";
+    const client = (options?.clientName || "").replace(/\s+/g, " ").trim();
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
     const nameLines = companyName
       ? (doc.splitTextToSize(companyName, pageW - margin * 2 - 28) as string[]).slice(0, 2)
       : [];
-    const headerH = 28 + (nameLines.length ? nameLines.length * 5 : 0) + (contact ? 5 : 0);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    const clientLines = client
+      ? (doc.splitTextToSize(`Para ${client}`, pageW - margin * 2) as string[]).slice(0, 2)
+      : [];
+    const headerH =
+      28 +
+      (nameLines.length ? nameLines.length * 5 : 0) +
+      (clientLines.length ? clientLines.length * 5 : 0) +
+      (contact ? 5 : 0);
     fill(doc, ink);
     doc.rect(0, 0, pageW, headerH, "F");
     inkText(doc, cream);
     let cursor = 11;
     if (nameLines.length) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
       doc.text(nameLines, margin, cursor);
       cursor += nameLines.length * 5;
     }
+    doc.setFont("helvetica", "bold");
     doc.setFontSize(nameLines.length ? 16 : 18);
-    doc.text(showPrices ? "Catálogo de caixas" : "Catálogo de medidas", margin, cursor);
+    doc.text(isBatch ? "Orçamento" : showPrices ? "Catálogo de caixas" : "Catálogo de medidas", margin, cursor);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     doc.text(`${quotes.length} ${quotes.length === 1 ? "caixa" : "caixas"}`, pageW - margin, 11, { align: "right" });
     cursor += 6;
+    if (clientLines.length) {
+      doc.setFontSize(10);
+      doc.text(clientLines, margin, cursor);
+      cursor += clientLines.length * 5;
+    }
+    doc.setFontSize(9);
     const detail = showPrices ? "valores unitários por quantidade" : "sem valores";
-    const scope = options?.filtered ? "Recorte da pesquisa · " : "";
+    const scope = !isBatch && options?.filtered ? "Recorte da pesquisa · " : "";
     const hasDieCut = quotes.some((quote) => quote.family === "corte_vinco");
     const hasCommon = quotes.some((quote) => quote.family !== "corte_vinco");
     const mix = hasDieCut && hasCommon ? " · corte e vinco separado" : hasDieCut ? " · corte e vinco" : "";
@@ -277,4 +322,9 @@ export function downloadCatalogPdf(
   identity: CatalogIdentity = emptyCatalogIdentity,
 ) {
   buildCatalogPdf(quotes, { filtered, kind, identity }).save(catalogFilename(new Date(), kind));
+}
+
+export function downloadQuoteBatchPdf(quotes: Quote[], clientName: string, identity: CatalogIdentity = emptyCatalogIdentity) {
+  const name = clientName.trim();
+  buildCatalogPdf(quotes, { document: "pedido", clientName: name, identity }).save(quoteBatchFilename(new Date(), name));
 }
