@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
 import { formatDate, formatPhone } from "./format";
-import { displayNote, formatMeasuresCm, groupQuotes, tierQuantityLabel, type Quote } from "./quotes";
+import { displayNote, groupQuotes, measureHeading, tierQuantityLabel, type Quote } from "./quotes";
 import { emptyCatalogIdentity, type CatalogIdentity } from "./types";
 
 export type { CatalogIdentity };
@@ -47,7 +47,7 @@ function layoutCard(doc: jsPDF, quote: Quote, width: number, showPrices: boolean
   const inner = width - 8;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
-  const titleLines = doc.splitTextToSize(formatMeasuresCm(quote, "x"), inner) as string[];
+  const titleLines = doc.splitTextToSize(measureHeading(quote, "x"), inner) as string[];
   doc.setFont("helvetica", "italic");
   doc.setFontSize(8);
   const note = displayNote(quote);

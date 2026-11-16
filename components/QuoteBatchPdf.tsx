@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { formatBrl, formatInt } from "@/lib/format";
-import { displayNote, formatMeasuresCm, groupQuotes, parseQuotes, tierQuantityLabel } from "@/lib/quotes";
+import { displayNote, groupQuotes, measureHeading, parseQuotes, tierQuantityLabel } from "@/lib/quotes";
 import type { CatalogIdentity } from "@/lib/types";
 
 const PLACEHOLDER = `Caixa 220 x 220 x 160
@@ -88,7 +88,9 @@ export function QuoteBatchPdf({
         }}
       >
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm text-mute">Cada bloco começa com Caixa ou com as três medidas, e o valor.</p>
+          <p className="text-sm text-mute">
+            Cada bloco começa com Caixa, Tabuleiro ou só com as três medidas. Também vale o texto com asteriscos, como *Caixa 890 x 440 x 480* e 100 caixas: R$ 20,53 cada.
+          </p>
           <button type="button" className="btn" onClick={() => fileRef.current?.click()}>
             Escolher txt
           </button>
@@ -147,7 +149,7 @@ export function QuoteBatchPdf({
             {group.quotes.map((quote) => (
               <article key={quote.id} className="flex flex-wrap items-start justify-between gap-3 px-4 py-3">
                 <div>
-                  <p className="font-medium">{formatMeasuresCm(quote)}</p>
+                  <p className="font-medium">{measureHeading(quote)}</p>
                   {displayNote(quote) && <p className="text-sm text-mute">{displayNote(quote)}</p>}
                 </div>
                 <ul className="text-right text-sm">

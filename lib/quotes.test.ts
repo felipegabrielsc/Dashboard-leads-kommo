@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { buildQuote, displayNote, draftFromQuote, formatCm, formatMeasuresCm, groupQuotes, parseQuotes, quoteTitle, searchQuotes } from "./quotes";
+import { buildQuote, displayNote, draftFromQuote, formatCm, formatMeasuresCm, groupQuotes, measureHeading, parseQuotes, quoteTitle, searchQuotes } from "./quotes";
 
 const text = readFileSync(new URL("../data/medidas-de-exemplo.txt", import.meta.url), "utf8");
 const quotes = parseQuotes(text);
@@ -177,4 +177,43 @@ if (!("quote" in manualDieCut)) throw new Error(manualDieCut.error);
 assert.equal(manualDieCut.quote.family, "corte_vinco");
 assert.match(manualDieCut.quote.id, /corte_vinco/);
 
-console.log("quotes ok", quotes.length, dieCutFile.length);
+const pasted = parseQuotes(readFileSync(new URL("../data/pedido-asteriscos.txt", import.meta.url), "utf8"));
+assert.equal(pasted.length, 25);
+const wide = pasted.find((quote) => quote.width === 890 && quote.depth === 440 && quote.height === 480);
+assert.ok(wide);
+assert.equal(wide.material, "Papelão B");
+assert.equal(wide.family, "padrao");
+assert.deepEqual(
+  wide.tiers.map((tier) => [tier.quantity, tier.unitPrice, tier.detail || ""]),
+  [
+    [100, 20.53, ""],
+    [200, 18.77, ""],
+    [500, 16.42, ""],
+    [1000, 14.66, ""],
+  ],
+);
+assert.ok(pasted.some((quote) => quote.width === 1135 && quote.depth === 295 && quote.height === 200));
+assert.ok(pasted.some((quote) => quote.width === 1000 && quote.depth === 165 && quote.height === 165));
+assert.ok(pasted.some((quote) => quote.width === 1210 && quote.depth === 450 && quote.height === 300));
+assert.ok(pasted.some((quote) => quote.width === 1430 && quote.depth === 350 && quote.height === 225));
+const flap = pasted.find((quote) => quote.width === 360 && quote.depth === 80 && quote.height === 80);
+assert.ok(flap);
+assert.match(flap.note, /aba transpassada/i);
+assert.equal(flap.tiers.find((tier) => tier.quantity === 1000)?.unitPrice, 0.9);
+const boards = pasted.filter((quote) => quote.width === 375 && quote.depth === 380);
+assert.equal(boards.length, 2);
+assert.equal(boards.every((quote) => quote.height === 0 && quote.product === "tabuleiro"), true);
+assert.deepEqual(
+  boards.map((quote) => quote.material).sort(),
+  ["Papelão B", "Papelão C"],
+);
+assert.equal(measureHeading(boards[0]), "Tabuleiro 37,5 × 38 cm");
+assert.equal(formatMeasuresCm(boards[0]), "37,5 × 38 cm");
+assert.equal(pasted.every((quote) => quote.tiers.every((tier) => !/total/i.test(tier.detail || ""))), true);
+const withNbsp = parseQuotes(readFileSync(new URL("../data/pedido-asteriscos.txt", import.meta.url), "utf8").replace("R$ 20,53", "R$\u00A020,53"));
+assert.equal(
+  withNbsp.find((quote) => quote.width === 890)?.tiers[0]?.unitPrice,
+  20.53,
+);
+
+console.log("quotes ok", quotes.length, dieCutFile.length, pasted.length);

@@ -17,20 +17,26 @@ export type Quote = {
   note: string;
   family: QuoteFamily;
   tiers: QuoteTier[];
+  product?: string;
 };
 
-const DIMENSIONS = /(\d+)\s*x\s*(\d+)\s*x\s*(\d+)/i;
-const BARE_DIMENSIONS = /^(\d+)\s*x\s*(\d+)\s*x\s*(\d+)\s*$/i;
+const DIM_TOKEN = String.raw`(\d{1,3}(?:\.\d{3})+|\d+)`;
+const THREE_DIMS = new RegExp(String.raw`${DIM_TOKEN}\s*x\s*${DIM_TOKEN}\s*x\s*${DIM_TOKEN}`, "i");
+const TWO_DIMS = new RegExp(String.raw`${DIM_TOKEN}\s*x\s*${DIM_TOKEN}`, "i");
+const BARE_DIMENSIONS = new RegExp(String.raw`^${DIM_TOKEN}\s*x\s*${DIM_TOKEN}\s*x\s*${DIM_TOKEN}\s*$`, "i");
 const QTY = String.raw`(\d{1,3}(?:\.\d{3})+|\d+)`;
 const MONEY = String.raw`(\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2})`;
 
 type QuoteIdentity = Pick<Quote, "width" | "depth" | "height" | "material" | "note"> & {
   family?: QuoteFamily;
+  product?: string;
 };
 
 export function quoteKey(quote: QuoteIdentity): string {
   const note = normalizeLabel(quote.note);
-  const base = `${quote.width}x${quote.depth}x${quote.height}|${normalizeLabel(quote.material)}|${note}`;
+  const product =
+    quote.product && normalizeLabel(quote.product) !== "caixa" ? `${normalizeLabel(quote.product)}|` : "";
+  const base = `${product}${quote.width}x${quote.depth}x${quote.height}|${normalizeLabel(quote.material)}|${note}`;
   if (quote.family === "corte_vinco" && !note.includes("vinco")) return `${base}|corte_vinco`;
   return base;
 }
@@ -55,8 +61,16 @@ export function displayNote(quote: Pick<Quote, "note" | "family">): string {
     .trim();
 }
 
-export function quoteTitle(quote: Pick<Quote, "width" | "depth" | "height" | "note" | "family">): string {
-  const base = `Caixa ${quote.width} × ${quote.depth} × ${quote.height}`;
+export function quoteTitle(quote: Pick<Quote, "width" | "depth" | "height" | "note" | "family" | "product">): string {
+  const rawName = quote.product?.trim() ?? "";
+  const name =
+    rawName && normalizeLabel(rawName) !== "caixa"
+      ? rawName.charAt(0).toUpperCase() + rawName.slice(1).toLowerCase()
+      : "Caixa";
+  const measures = quote.height
+    ? `${quote.width} × ${quote.depth} × ${quote.height}`
+    : `${quote.width} × ${quote.depth}`;
+  const base = `${name} ${measures}`;
   const note = displayNote(quote);
   return note ? `${base} ${note}` : base;
 }
@@ -79,7 +93,52 @@ export function formatCm(millimeters: number): string {
 }
 
 export function formatMeasuresCm(quote: Pick<Quote, "width" | "depth" | "height">, separator = "×"): string {
-  return `${formatCm(quote.width)} ${separator} ${formatCm(quote.depth)} ${separator} ${formatCm(quote.height)} cm`;
+  const parts = [formatCm(quote.width), formatCm(quote.depth)];
+  if (quote.height) parts.push(formatCm(quote.height));
+  return `${parts.join(` ${separator} `)} cm`;
+}
+
+export function measureHeading(
+  quote: Pick<Quote, "width" | "depth" | "height" | "product">,
+  separator = "×",
+): string {
+  const measures = formatMeasuresCm(quote, separator);
+  const product = quote.product?.trim() ?? "";
+  if (!product || normalizeLabel(product) === "caixa") return measures;
+  const label = product.charAt(0).toUpperCase() + product.slice(1).toLowerCase();
+  return `${label} ${measures}`;
+}
+
+function tidyLine(raw: string): string {
+  return raw
+    .replace(/[\u00A0\u202F\u2007\u2009]/g, " ")
+    .replace(/\*/g, "")
+    .replace(/[ \t]+/g, " ")
+    .trim();
+}
+
+function readDims(text: string): { width: number; depth: number; height: number; index: number; end: number } | null {
+  const three = text.match(THREE_DIMS);
+  if (three?.index != null) {
+    return {
+      width: parseQuantity(three[1]),
+      depth: parseQuantity(three[2]),
+      height: parseQuantity(three[3]),
+      index: three.index,
+      end: three.index + three[0].length,
+    };
+  }
+  const two = text.match(TWO_DIMS);
+  if (two?.index != null) {
+    return {
+      width: parseQuantity(two[1]),
+      depth: parseQuantity(two[2]),
+      height: 0,
+      index: two.index,
+      end: two.index + two[0].length,
+    };
+  }
+  return null;
 }
 
 function readMoney(raw: string): number {
@@ -93,7 +152,7 @@ function parseQuantity(raw: string): number {
 function detailFrom(line: string): string {
   return [...line.matchAll(/\(([^)]+)\)/g)]
     .map((item) => item[1].trim())
-    .filter(Boolean)
+    .filter((item) => item && !/^total\b/i.test(item))
     .join(", ");
 }
 
@@ -114,9 +173,9 @@ function parsePriceLine(line: string): ParsedPrice | null {
   }
 
   const withQty = line.match(
-    new RegExp(`^${QTY}\\s*(?:caixas?\\s*)?(?:[-–—]\\s*)?(?:R\\$\\s*)?${MONEY}\\b`, "i"),
+    new RegExp(`^${QTY}\\s*(?:caixas?|tabuleiros?)?\\s*[:\\-–—]?\\s*(?:R\\$\\s*)?${MONEY}\\b`, "i"),
   );
-  if (!withQty || !/caixas?\b|R\$|[-–—]/i.test(line)) return null;
+  if (!withQty || !/caixas?\b|tabuleiros?\b|R\$|[-–—]/i.test(line)) return null;
   const quantity = parseQuantity(withQty[1]);
   const unitPrice = readMoney(withQty[2]);
   if (!quantity || !Number.isFinite(unitPrice)) return null;
@@ -158,6 +217,7 @@ type RawQuote = {
   height: number;
   material: string;
   note: string;
+  product: string;
   tiers: QuoteTier[];
   header: string;
   headerKind: "caixa" | "bare";
@@ -181,6 +241,7 @@ function blankRaw(
     height,
     material,
     note,
+    product: "caixa",
     tiers: tier ? [tier] : [],
     header,
     headerKind,
@@ -221,6 +282,7 @@ function finishRaw(raws: RawQuote[]): Quote[] {
       note: raw.note,
       family,
       tiers,
+      product: raw.product,
     };
     quotes.push({ ...partial, id: quoteId(partial) });
   }
@@ -251,32 +313,24 @@ export function parseQuotes(text: string): Quote[] {
   }
 
   for (const rawLine of text.replace(/^\uFEFF/, "").split(/\r?\n/)) {
-    const line = rawLine.trim();
+    const line = tidyLine(rawLine);
     if (!line || /^quantidade\s+valor/i.test(line) || /^esse e o formato/i.test(normalizeLabel(line))) continue;
 
-    const caixa = line.match(/^caixa\b(.*)$/i);
-    const dims = caixa ? caixa[1].match(DIMENSIONS) : null;
-    if (caixa && dims && dims.index != null) {
+    const productLine = line.match(/^(caixa|tabuleiro)\b(.*)$/i);
+    const dims = productLine ? readDims(productLine[2]) : null;
+    if (productLine && dims) {
       commit();
-      const trailing = takeTrailingTier(caixa[1].slice(dims.index + dims[0].length));
-      const extra = splitExtra(caixa[1].slice(0, dims.index), trailing.rest);
-      current = blankRaw(
-        Number(dims[1]),
-        Number(dims[2]),
-        Number(dims[3]),
-        line,
-        "caixa",
-        extra.material,
-        extra.note,
-        trailing.tier,
-      );
+      const trailing = takeTrailingTier(productLine[2].slice(dims.end));
+      const extra = splitExtra(productLine[2].slice(0, dims.index), trailing.rest);
+      current = blankRaw(dims.width, dims.depth, dims.height, line, "caixa", extra.material, extra.note, trailing.tier);
+      current.product = productLine[1].toLowerCase();
       continue;
     }
 
     const bare = line.match(BARE_DIMENSIONS);
     if (bare) {
       commit();
-      current = blankRaw(Number(bare[1]), Number(bare[2]), Number(bare[3]), line, "bare", "", "", null);
+      current = blankRaw(parseQuantity(bare[1]), parseQuantity(bare[2]), parseQuantity(bare[3]), line, "bare", "", "", null);
       continue;
     }
 
@@ -346,7 +400,7 @@ export function searchQuotes(quotes: Quote[], query: string, material = "", fami
     }
     if (!words.length) return true;
     const familyText = quote.family === "corte_vinco" ? "corte e vinco" : "";
-    const haystack = normalizeLabel(`${quote.material} ${quote.note} ${familyText}`);
+    const haystack = normalizeLabel(`${quote.product || ""} ${quote.material} ${quote.note} ${familyText}`);
     return words.every((word) => haystack.includes(word));
   });
 }
