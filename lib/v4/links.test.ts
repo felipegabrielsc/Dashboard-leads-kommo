@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { carryLinks, manualOverlaps, rankLinkCandidates } from "./links";
+import { acceptImportLinks, allowFollowing, carryLinks, followingPurchases, inheritedLinks, leadConflict, manualOverlaps, rankLinkCandidates } from "./links";
 import { parseManualRepurchase } from "./manual";
 import type { V4Row } from "./types";
 
@@ -35,7 +35,8 @@ const rejected = [
 for (const input of rejected) assert.equal(parseManualRepurchase(input, today).ok, false, JSON.stringify(input));
 assert.equal(parseManualRepurchase(null, today).ok, false);
 
-const sale = { id: "venda", saleDate: "2026-04-10", customerName: "Oficina Alfa", amount: 750 };
+const sale = { id: "venda", saleDate: "2026-04-10", customerName: "Oficina Alfa", customerKey: "oficina alfa", amount: 750 };
+const use = (saleId: string, customerKey: string, alreadyInKommo: boolean) => ({ saleId, customerKey, customerName: customerKey, alreadyInKommo });
 const ranked = rankLinkCandidates(
   sale,
   [
@@ -44,19 +45,44 @@ const ranked = rankLinkCandidates(
     { id: 3, name: "Oficina Alfa", price: 900, closedOn: "2026-04-10", url: "" },
     { id: 4, name: "Oficina Alfa", price: 750, closedOn: "2026-04-10", url: "" },
     { id: 5, name: "Sem relação", price: 120, closedOn: "2026-04-25", url: "" },
+    { id: 6, name: "Primeira compra", price: 2000, closedOn: "2026-02-01", url: "" },
   ],
-  new Map([[4, "outra-venda"]]),
+  new Map([
+    [4, [use("outra-venda", "bhn", true)]],
+    [6, [use("primeira", "oficina alfa", true)]],
+  ]),
 );
 assert.deepEqual(
   ranked.map((item) => item.id),
-  [2, 1, 3, 5, 4],
+  [6, 2, 1, 3, 5, 4],
 );
-assert.equal(ranked[0]?.sameAmount, true);
-assert.equal(ranked[0]?.nameMatch, true);
-assert.equal(ranked[0]?.dayGap, 2);
-assert.equal(ranked[4]?.linkedSaleId, "outra-venda");
-const self = rankLinkCandidates(sale, [{ id: 4, name: "Oficina Alfa", price: 750, closedOn: "2026-04-10", url: "" }], new Map([[4, "venda"]]));
-assert.equal(self[0]?.linkedSaleId, null);
+assert.equal(ranked[0]?.customerLead, true);
+assert.equal(ranked[0]?.countedSaleId, "primeira");
+assert.equal(ranked[1]?.sameAmount, true);
+assert.equal(ranked[1]?.nameMatch, true);
+assert.equal(ranked[1]?.dayGap, 2);
+assert.equal(ranked[5]?.otherCustomer, "bhn");
+const self = rankLinkCandidates(sale, [{ id: 4, name: "Oficina Alfa", price: 750, closedOn: "2026-04-10", url: "" }], new Map([[4, [use("venda", "oficina alfa", true)]]]));
+assert.equal(self[0]?.customerLead, false);
+assert.equal(self[0]?.countedSaleId, null);
+
+const firstAndRepurchase = [use("primeira", "oficina alfa", true), use("recompra", "oficina alfa", false)];
+assert.equal(leadConflict({ id: "nova", customerKey: "oficina alfa" }, firstAndRepurchase, false), null);
+assert.deepEqual(leadConflict({ id: "nova", customerKey: "oficina alfa" }, firstAndRepurchase, true), { countedSaleId: "primeira" });
+assert.equal(leadConflict({ id: "primeira", customerKey: "oficina alfa" }, firstAndRepurchase, true), null);
+assert.deepEqual(leadConflict({ id: "nova", customerKey: "bhn" }, firstAndRepurchase, false), { otherCustomer: "oficina alfa" });
+
+const procar = [
+  { id: "p4", saleDate: "2026-10-21", purchaseNumber: 4 },
+  { id: "p1", saleDate: "2026-07-24", purchaseNumber: 1 },
+  { id: "n1", saleDate: "2026-11-10", purchaseNumber: 1 },
+  { id: "p2", saleDate: "2026-08-11", purchaseNumber: 2 },
+  { id: "p3", saleDate: "2026-09-15", purchaseNumber: 3 },
+];
+assert.deepEqual(followingPurchases("p1", procar).map((item) => item.id), ["p2", "p3", "p4"]);
+assert.deepEqual(followingPurchases("p3", procar).map((item) => item.id), ["p4"]);
+assert.deepEqual(followingPurchases("n1", procar).map((item) => item.id), []);
+assert.deepEqual(followingPurchases("ausente", procar), []);
 
 function v4(partial: Partial<V4Row> & Pick<V4Row, "sourceRow">): V4Row {
   return {
@@ -77,9 +103,9 @@ function v4(partial: Partial<V4Row> & Pick<V4Row, "sourceRow">): V4Row {
 
 const carried = carryLinks(
   [
-    { saleDate: "2026-04-10", customerKey: "oficina alfa", amount: 750, purchaseNumber: 2, kommoLeadId: 44 },
-    { saleDate: "2026-04-11", customerKey: "bhn", amount: 300, purchaseNumber: 1, kommoLeadId: 55 },
-    { saleDate: "2026-04-11", customerKey: "bhn", amount: 300, purchaseNumber: 1, kommoLeadId: 56 },
+    { saleDate: "2026-04-10", customerKey: "oficina alfa", amount: 750, purchaseNumber: 2, kommoLeadId: 44, alreadyInKommo: false },
+    { saleDate: "2026-04-11", customerKey: "bhn", amount: 300, purchaseNumber: 1, kommoLeadId: 55, alreadyInKommo: true },
+    { saleDate: "2026-04-11", customerKey: "bhn", amount: 300, purchaseNumber: 1, kommoLeadId: 56, alreadyInKommo: true },
   ],
   [
     v4({ sourceRow: 7 }),
@@ -90,10 +116,54 @@ const carried = carryLinks(
   ],
 );
 assert.deepEqual([...carried], [
-  [7, 44],
-  [9, 55],
-  [10, 56],
+  [7, { kommoLeadId: 44, alreadyInKommo: false }],
+  [9, { kommoLeadId: 55, alreadyInKommo: true }],
+  [10, { kommoLeadId: 56, alreadyInKommo: true }],
 ]);
+
+const importRows = [
+  v4({ sourceRow: 2, purchaseNumber: 1, isRepurchase: false }),
+  v4({ sourceRow: 3, purchaseNumber: 2 }),
+  v4({ sourceRow: 4, purchaseNumber: 3 }),
+  v4({ sourceRow: 5, customerKey: "bhn" }),
+  v4({ sourceRow: 6, customerKey: "zeta" }),
+];
+const allowAll = new Map(importRows.map((row) => [row.sourceRow, new Set([70, 71])]));
+const accepted = acceptImportLinks(
+  importRows,
+  new Map([
+    [2, { kommoLeadId: 70, alreadyInKommo: true }],
+    [3, { kommoLeadId: 70, alreadyInKommo: false }],
+    [4, { kommoLeadId: 70, alreadyInKommo: true }],
+    [5, { kommoLeadId: 70, alreadyInKommo: false }],
+    [6, { kommoLeadId: 71, alreadyInKommo: false }],
+  ]),
+  allowAll,
+  [{ leadId: 71, customerKey: "outro", counted: false }],
+);
+assert.deepEqual([...accepted], [
+  [2, { kommoLeadId: 70, alreadyInKommo: true }],
+  [3, { kommoLeadId: 70, alreadyInKommo: false }],
+  [4, { kommoLeadId: 70, alreadyInKommo: false }],
+]);
+
+const cycle = [
+  v4({ sourceRow: 20, customerKey: "procar", saleDate: "2026-07-24", purchaseNumber: 1, isRepurchase: false }),
+  v4({ sourceRow: 21, customerKey: "procar", saleDate: "2026-08-11", purchaseNumber: 2 }),
+  v4({ sourceRow: 22, customerKey: "bhn", saleDate: "2026-08-12", purchaseNumber: 2 }),
+  v4({ sourceRow: 23, customerKey: "procar", saleDate: "2026-09-15", purchaseNumber: 3 }),
+  v4({ sourceRow: 24, customerKey: "procar", saleDate: "2026-11-10", purchaseNumber: 1, isRepurchase: false }),
+];
+assert.deepEqual([...inheritedLinks(cycle, new Map([[20, 7003]]))], [
+  [21, 7003],
+  [23, 7003],
+]);
+assert.deepEqual([...inheritedLinks(cycle, new Map([[20, 7003], [23, 9000]]))], [[21, 7003]]);
+const widened = allowFollowing(cycle, new Map([[20, { kommoLeadId: 7003, alreadyInKommo: true }], [22, { kommoLeadId: 7003, alreadyInKommo: false }]]), new Map([[20, new Set([7003])]]));
+assert.deepEqual([...(widened.get(21) || [])], [7003]);
+assert.deepEqual([...(widened.get(23) || [])], [7003]);
+assert.equal(widened.has(22), false);
+assert.equal(widened.has(24), false);
 
 const overlaps = manualOverlaps(
   [

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { formatBrl, formatDate, formatInt } from "@/lib/format";
+import { inheritedLinks } from "@/lib/v4/sequence";
 import type { V4Candidate, V4Issue, V4Row, V4Suggestion } from "@/lib/v4/types";
 import { KommoShell } from "./KommoShell";
 import { commercialSearch } from "./query";
@@ -22,7 +23,7 @@ type Preview = {
     repurchaseAmount: number;
   };
   suggestions: V4Suggestion[];
-  carried?: { sourceRow: number; candidate: V4Candidate }[];
+  carried?: { sourceRow: number; candidate: V4Candidate; alreadyInKommo: boolean }[];
   manualOverlaps?: {
     sourceRow: number;
     manual: { id: string; saleDate: string; customerName: string; amount: number; purchaseNumber: number };
@@ -58,6 +59,7 @@ export function V4Import() {
   const [preview, setPreview] = useState<Preview | null>(null);
   const [marked, setMarked] = useState<Record<number, boolean>>({});
   const [picked, setPicked] = useState<Record<number, number>>({});
+  const [kept, setKept] = useState<Record<number, boolean>>({});
   const [batches, setBatches] = useState<Batch[]>([]);
   const [ready, setReady] = useState(true);
   const [message, setMessage] = useState("");
@@ -103,13 +105,16 @@ export function V4Import() {
         if (first) selection[suggestion.sourceRow] = first.id;
       }
       const carriedMarks: Record<number, boolean> = {};
+      const keptLeads: Record<number, boolean> = {};
       for (const link of next.carried || []) {
         selection[link.sourceRow] = link.candidate.id;
-        carriedMarks[link.sourceRow] = true;
+        if (link.alreadyInKommo) carriedMarks[link.sourceRow] = true;
+        else keptLeads[link.sourceRow] = true;
       }
       fileRef.current = file;
       setPicked(selection);
       setMarked(carriedMarks);
+      setKept(keptLeads);
       setPreview(next);
     } catch {
       setError("Não consegui ler a planilha.");
@@ -124,9 +129,12 @@ export function V4Import() {
     setBusy(true);
     setError("");
     setMessage("");
-    const links = preview.rows
-      .filter((row) => marked[row.sourceRow] && picked[row.sourceRow])
-      .map((row) => ({ sourceRow: row.sourceRow, kommoLeadId: picked[row.sourceRow] }));
+    const links = preview.rows.flatMap((row) => {
+      const own = ownLinks.get(row.sourceRow);
+      if (own) return [{ sourceRow: row.sourceRow, kommoLeadId: own, alreadyInKommo: Boolean(marked[row.sourceRow]) }];
+      const inherited = inheritedRows.get(row.sourceRow);
+      return inherited ? [{ sourceRow: row.sourceRow, kommoLeadId: inherited, alreadyInKommo: false }] : [];
+    });
     const form = new FormData();
     form.set("file", file);
     form.set("links", JSON.stringify(links));
@@ -149,11 +157,24 @@ export function V4Import() {
   }
 
   const suggestions = new Map((preview?.suggestions || []).map((item) => [item.sourceRow, item.candidates]));
-  for (const link of preview?.carried || []) {
+  const attributedRows = new Map(
+    (preview?.carried || []).filter((link) => !link.alreadyInKommo).map((link) => [link.sourceRow, link.candidate]),
+  );
+  for (const link of (preview?.carried || []).filter((item) => item.alreadyInKommo)) {
     const list = suggestions.get(link.sourceRow) || [];
     if (!list.some((candidate) => candidate.id === link.candidate.id)) suggestions.set(link.sourceRow, [link.candidate, ...list]);
   }
-  const carriedRows = new Set((preview?.carried || []).map((link) => link.sourceRow));
+  const ownLinks = new Map<number, number>();
+  for (const row of preview?.rows || []) {
+    const attributed = attributedRows.get(row.sourceRow);
+    if (attributed && kept[row.sourceRow] && !marked[row.sourceRow]) ownLinks.set(row.sourceRow, attributed.id);
+    else if (marked[row.sourceRow] && picked[row.sourceRow]) ownLinks.set(row.sourceRow, picked[row.sourceRow]);
+  }
+  const inheritedRows = inheritedLinks(preview?.rows || [], ownLinks);
+  const leadNames = new Map<number, string>();
+  for (const list of suggestions.values()) for (const candidate of list) leadNames.set(candidate.id, candidate.name);
+  for (const candidate of attributedRows.values()) leadNames.set(candidate.id, candidate.name);
+  const carriedRows = new Set((preview?.carried || []).filter((link) => link.alreadyInKommo).map((link) => link.sourceRow));
 
   return (
     <KommoShell
@@ -246,10 +267,10 @@ export function V4Import() {
               </ul>
             </div>
           ) : null}
-          {carriedRows.size ? (
+          {carriedRows.size + attributedRows.size ? (
             <p className="text-sm text-mute">
-              {formatInt(carriedRows.size)} venda{carriedRows.size === 1 ? "" : "s"} já vinculada{carriedRows.size === 1 ? "" : "s"} na planilha ativa
-              {carriedRows.size === 1 ? " veio marcada" : " vieram marcadas"} com o mesmo negócio do Kommo.
+              {formatInt(carriedRows.size + attributedRows.size)} venda{carriedRows.size + attributedRows.size === 1 ? "" : "s"} já vinculada
+              {carriedRows.size + attributedRows.size === 1 ? "" : "s"} na planilha ativa mantém o mesmo lead do Kommo.
             </p>
           ) : null}
           <div className="max-w-full overflow-x-auto">
@@ -275,7 +296,19 @@ export function V4Import() {
                       <td className="py-2 pr-3">{row.isRepurchase ? `Recompra ${row.purchaseNumber}` : "Primeira"}</td>
                       <td className="py-2 pr-3">{row.sellerName || "—"}</td>
                       <td className="py-2">
-                        {candidates.length ? (
+                        {attributedRows.has(row.sourceRow) ? (
+                          <label className="flex flex-wrap items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(kept[row.sourceRow])}
+                              onChange={(event) => setKept((current) => ({ ...current, [row.sourceRow]: event.target.checked }))}
+                            />
+                            <span>
+                              Lead do cliente #{attributedRows.get(row.sourceRow)?.id} {attributedRows.get(row.sourceRow)?.name}
+                              <span className="block text-xs text-mute">Vínculo atual. Continua na soma.</span>
+                            </span>
+                          </label>
+                        ) : candidates.length ? (
                           <label className="flex flex-wrap items-center gap-2">
                             <input
                               type="checkbox"
@@ -299,9 +332,15 @@ export function V4Import() {
                               ))}
                             </select>
                           </label>
-                        ) : (
+                        ) : inheritedRows.has(row.sourceRow) ? null : (
                           <span className="text-mute">Sem correspondência</span>
                         )}
+                        {inheritedRows.has(row.sourceRow) && !ownLinks.has(row.sourceRow) ? (
+                          <span className="mt-1 block">
+                            Lead do cliente #{inheritedRows.get(row.sourceRow)} {leadNames.get(inheritedRows.get(row.sourceRow) || 0) || ""}
+                            <span className="block text-xs text-mute">Vem da compra anterior. Continua na soma.</span>
+                          </span>
+                        ) : null}
                       </td>
                     </tr>
                   );

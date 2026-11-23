@@ -3,7 +3,16 @@ import { kommoCredentials, leadUrl } from "../kommo/client";
 import { kommoStore } from "../kommo/db";
 import { dayInSaoPaulo } from "../kommo/metrics";
 import { errorText } from "../kommo/rpcError";
-import { candidateWindow, rankLinkCandidates, type LinkCandidate, type ManualSale, type PreviousLink } from "./links";
+import {
+  candidateWindow,
+  followingPurchases,
+  leadConflict,
+  rankLinkCandidates,
+  type LeadUse,
+  type LinkCandidate,
+  type ManualSale,
+  type PreviousLink,
+} from "./links";
 import type { ManualRepurchase } from "./manual";
 
 export type SaleSource = "planilha" | "manual";
@@ -162,37 +171,73 @@ async function assertCurrent(supabase: SupabaseClient, sale: SaleRow): Promise<s
   return batch?.id || null;
 }
 
-async function linkedSales(supabase: SupabaseClient, batchId: string | null, leadIds: number[]): Promise<Map<number, string>> {
-  const linked = new Map<number, string>();
-  if (!leadIds.length) return linked;
-  let query = supabase.from("v4_sales").select("id,kommo_lead_id").in("kommo_lead_id", leadIds);
-  query = batchId ? query.or(`import_batch_id.eq.${batchId},source.eq.manual`) : query.eq("source", "manual");
-  const { data, error } = await query;
+function scopeCurrent<Q extends { or: (filter: string) => Q; eq: (column: string, value: string) => Q }>(query: Q, batchId: string | null): Q {
+  return batchId ? query.or(`import_batch_id.eq.${batchId},source.eq.manual`) : query.eq("source", "manual");
+}
+
+async function leadUses(supabase: SupabaseClient, batchId: string | null, leadIds: number[]): Promise<Map<number, LeadUse[]>> {
+  const uses = new Map<number, LeadUse[]>();
+  if (!leadIds.length) return uses;
+  const query = supabase
+    .from("v4_sales")
+    .select("id,kommo_lead_id,customer_key,customer_name,already_in_kommo")
+    .in("kommo_lead_id", leadIds);
+  const { data, error } = await scopeCurrent(query, batchId);
   if (error) throw error;
-  for (const row of data || []) linked.set(Number(row.kommo_lead_id), String(row.id));
-  return linked;
+  for (const row of data || []) {
+    const leadId = Number(row.kommo_lead_id);
+    const list = uses.get(leadId) || [];
+    list.push({
+      saleId: String(row.id),
+      customerKey: String(row.customer_key || ""),
+      customerName: String(row.customer_name || ""),
+      alreadyInKommo: Boolean(row.already_in_kommo),
+    });
+    uses.set(leadId, list);
+  }
+  return uses;
+}
+
+async function customerSales(supabase: SupabaseClient, batchId: string | null, customerKey: string) {
+  const query = supabase
+    .from("v4_sales")
+    .select("id,sale_date,purchase_number,kommo_lead_id,already_in_kommo")
+    .eq("customer_key", customerKey);
+  const { data, error } = await scopeCurrent(query, batchId);
+  if (error) throw error;
+  return (data || []).map((row) => ({
+    id: String(row.id),
+    saleDate: String(row.sale_date),
+    purchaseNumber: Number(row.purchase_number) || 0,
+    kommoLeadId: row.kommo_lead_id == null ? null : Number(row.kommo_lead_id),
+    alreadyInKommo: Boolean(row.already_in_kommo),
+  }));
 }
 
 function searchTerm(raw: string): string {
   return raw.replace(/[%_,()*\\]/g, " ").replace(/\s+/g, " ").trim().slice(0, 80);
 }
 
+const LEAD_COLUMNS = "id,name,price,closed_at,kommo_url";
+
 export async function loadLinkCandidates(
   supabase: SupabaseClient,
   saleId: string,
   rawQuery: string,
-): Promise<{ candidates: LinkCandidate[]; window: { from: string; to: string } | null }> {
+): Promise<{ candidates: LinkCandidate[]; window: { from: string; to: string } | null; followingCount: number }> {
   const sale = await loadSale(supabase, saleId);
   const batchId = await assertCurrent(supabase, sale);
   const account = await kommoAccount(supabase);
   if (!account) throw new V4StoreError("Sincronize o Kommo antes de vincular vendas.", 409);
   const term = searchTerm(rawQuery);
-  let query = supabase
-    .from("kommo_leads")
-    .select("id,name,price,closed_at,kommo_url")
-    .eq("account_id", account.accountId)
-    .eq("is_deleted", false)
-    .eq("status_kind", "won");
+  const base = () =>
+    supabase
+      .from("kommo_leads")
+      .select(LEAD_COLUMNS)
+      .eq("account_id", account.accountId)
+      .eq("is_deleted", false)
+      .eq("status_kind", "won");
+  let query = base();
   let window: { from: string; to: string } | null = null;
   if (/^\d{1,15}$/.test(term)) {
     query = query.eq("id", Number(term));
@@ -207,17 +252,41 @@ export async function loadLinkCandidates(
   }
   const { data, error } = await query;
   if (error) throw error;
-  const leads = ((data || []) as LeadDb[]).map((row) => leadHint(row, account.subdomain)).filter((lead) => lead.closedOn);
-  const linked = await linkedSales(supabase, batchId, leads.map((lead) => lead.id));
+  const rows = (data || []) as LeadDb[];
+  const siblings = await customerSales(supabase, batchId, String(sale.customer_key || ""));
+  const customerLeadIds = [...new Set(siblings.flatMap((item) => (item.kommoLeadId && item.id !== sale.id ? [item.kommoLeadId] : [])))];
+  const missing = customerLeadIds.filter((id) => !rows.some((row) => Number(row.id) === id));
+  if (!term && missing.length) {
+    const extra = await base().in("id", missing);
+    if (extra.error) throw extra.error;
+    rows.push(...((extra.data || []) as LeadDb[]));
+  }
+  const leads = rows.map((row) => leadHint(row, account.subdomain)).filter((lead) => lead.closedOn);
+  const uses = await leadUses(supabase, batchId, leads.map((lead) => lead.id));
   const candidates = rankLinkCandidates(
-    { id: sale.id, saleDate: sale.sale_date, customerName: String(sale.customer_name || ""), amount: Number(sale.amount) || 0 },
+    {
+      id: sale.id,
+      saleDate: sale.sale_date,
+      customerName: String(sale.customer_name || ""),
+      customerKey: String(sale.customer_key || ""),
+      amount: Number(sale.amount) || 0,
+    },
     leads,
-    linked,
+    uses,
   );
-  return { candidates, window };
+  const followingCount = followingPurchases(sale.id, siblings).filter((item) => item.kommoLeadId == null).length;
+  return { candidates, window, followingCount };
 }
 
-export async function linkSale(supabase: SupabaseClient, saleId: string, leadId: number, userId: string): Promise<void> {
+export type LinkOptions = { counted: boolean; following: boolean };
+
+export async function linkSale(
+  supabase: SupabaseClient,
+  saleId: string,
+  leadId: number,
+  userId: string,
+  options: LinkOptions,
+): Promise<{ following: number }> {
   if (!Number.isInteger(leadId) || leadId <= 0) throw new V4StoreError("Escolha um negócio do Kommo.", 400);
   const sale = await loadSale(supabase, saleId);
   const batchId = await assertCurrent(supabase, sale);
@@ -232,23 +301,55 @@ export async function linkSale(supabase: SupabaseClient, saleId: string, leadId:
   if (error) throw error;
   if (!lead || lead.is_deleted) throw new V4StoreError("Este negócio não está no Kommo sincronizado.", 404);
   if (lead.status_kind !== "won") throw new V4StoreError("Só dá para vincular negócios ganhos no Kommo.", 409);
-  const other = (await linkedSales(supabase, batchId, [leadId])).get(leadId);
-  if (other && other !== sale.id) throw new V4StoreError("Este negócio do Kommo já está vinculado a outra venda.", 409);
+  const customerKey = String(sale.customer_key || "");
+  const conflict = leadConflict({ id: sale.id, customerKey }, (await leadUses(supabase, batchId, [leadId])).get(leadId) || [], options.counted);
+  if (conflict && "otherCustomer" in conflict) {
+    throw new V4StoreError(`Este negócio do Kommo já está vinculado ao cliente ${conflict.otherCustomer}.`, 409);
+  }
+  if (conflict) {
+    throw new V4StoreError("O valor deste negócio já está contado em outra venda deste cliente. Vincule sem tirar da soma.", 409);
+  }
+  const now = new Date().toISOString();
   const update = await supabase
     .from("v4_sales")
-    .update({ kommo_lead_id: leadId, already_in_kommo: true, linked_by: userId, linked_at: new Date().toISOString() })
+    .update({ kommo_lead_id: leadId, already_in_kommo: options.counted, linked_by: userId, linked_at: now })
     .eq("id", sale.id);
   if (update.error) throw update.error;
+  if (!options.following) return { following: 0 };
+  const targets = followingPurchases(sale.id, await customerSales(supabase, batchId, customerKey))
+    .filter((item) => item.kommoLeadId == null)
+    .map((item) => item.id);
+  if (!targets.length) return { following: 0 };
+  const cascade = await supabase
+    .from("v4_sales")
+    .update({ kommo_lead_id: leadId, already_in_kommo: false, linked_by: userId, linked_at: now })
+    .in("id", targets)
+    .is("kommo_lead_id", null);
+  if (cascade.error) throw cascade.error;
+  return { following: targets.length };
 }
 
-export async function unlinkSale(supabase: SupabaseClient, saleId: string, userId: string): Promise<void> {
+export async function unlinkSale(
+  supabase: SupabaseClient,
+  saleId: string,
+  userId: string,
+  following: boolean,
+): Promise<{ following: number }> {
   const sale = await loadSale(supabase, saleId);
-  await assertCurrent(supabase, sale);
-  const { error } = await supabase
-    .from("v4_sales")
-    .update({ kommo_lead_id: null, already_in_kommo: false, linked_by: userId, linked_at: new Date().toISOString() })
-    .eq("id", sale.id);
+  const batchId = await assertCurrent(supabase, sale);
+  const leadId = sale.kommo_lead_id == null ? null : Number(sale.kommo_lead_id);
+  const now = new Date().toISOString();
+  const cleared = { kommo_lead_id: null, already_in_kommo: false, linked_by: userId, linked_at: now };
+  const { error } = await supabase.from("v4_sales").update(cleared).eq("id", sale.id);
   if (error) throw error;
+  if (!following || leadId == null) return { following: 0 };
+  const targets = followingPurchases(sale.id, await customerSales(supabase, batchId, String(sale.customer_key || "")))
+    .filter((item) => item.kommoLeadId === leadId && !item.alreadyInKommo)
+    .map((item) => item.id);
+  if (!targets.length) return { following: 0 };
+  const cascade = await supabase.from("v4_sales").update(cleared).in("id", targets);
+  if (cascade.error) throw cascade.error;
+  return { following: targets.length };
 }
 
 export async function previousLinks(supabase: SupabaseClient): Promise<PreviousLink[]> {
@@ -256,7 +357,7 @@ export async function previousLinks(supabase: SupabaseClient): Promise<PreviousL
   if (!batch) return [];
   const { data, error } = await supabase
     .from("v4_sales")
-    .select("sale_date,customer_key,amount,purchase_number,kommo_lead_id")
+    .select("sale_date,customer_key,amount,purchase_number,kommo_lead_id,already_in_kommo")
     .eq("import_batch_id", batch.id)
     .not("kommo_lead_id", "is", null)
     .order("source_row");
@@ -267,18 +368,23 @@ export async function previousLinks(supabase: SupabaseClient): Promise<PreviousL
     amount: Number(row.amount) || 0,
     purchaseNumber: Number(row.purchase_number) || 0,
     kommoLeadId: Number(row.kommo_lead_id),
+    alreadyInKommo: Boolean(row.already_in_kommo),
   }));
 }
 
-export async function manualLinkedLeads(supabase: SupabaseClient): Promise<number[]> {
+export async function manualLeadUses(supabase: SupabaseClient): Promise<{ leadId: number; customerKey: string; counted: boolean }[]> {
   if (!(await manualReady(supabase))) return [];
   const { data, error } = await supabase
     .from("v4_sales")
-    .select("kommo_lead_id")
+    .select("kommo_lead_id,customer_key,already_in_kommo")
     .eq("source", "manual")
     .not("kommo_lead_id", "is", null);
   if (error) throw error;
-  return (data || []).map((row) => Number(row.kommo_lead_id));
+  return (data || []).map((row) => ({
+    leadId: Number(row.kommo_lead_id),
+    customerKey: String(row.customer_key || ""),
+    counted: Boolean(row.already_in_kommo),
+  }));
 }
 
 export async function manualSales(supabase: SupabaseClient): Promise<ManualSale[]> {
