@@ -27,7 +27,7 @@ export function SpreadsheetSales({
   onChanged: () => void;
 }) {
   const [page, setPage] = useState(1);
-  const [view, setView] = useState<View>("recompras");
+  const [view, setView] = useState<View>("todas");
   const [editing, setEditing] = useState<RepurchaseLine | null | undefined>(undefined);
   const [linking, setLinking] = useState<RepurchaseLine | null>(null);
   const [message, setMessage] = useState("");
@@ -59,7 +59,7 @@ export function SpreadsheetSales({
     onChanged();
   }
 
-  async function mutate(row: RepurchaseLine, url: string, success: string, fallback: string) {
+  async function mutate(row: RepurchaseLine, url: string, success: string | ((body: { following?: number }) => string), fallback: string) {
     setBusy(row.id);
     setError("");
     setMessage("");
@@ -70,7 +70,7 @@ export function SpreadsheetSales({
         setError(typeof body.error === "string" ? body.error : fallback);
         return;
       }
-      done(success);
+      done(typeof success === "string" ? success : success(body));
     } catch {
       setError(fallback);
     } finally {
@@ -79,10 +79,22 @@ export function SpreadsheetSales({
   }
 
   function unlink(row: RepurchaseLine) {
+    const later = audit.rows.some(
+      (other) =>
+        other.id !== row.id &&
+        other.customerName === row.customerName &&
+        other.kommoLeadId === row.kommoLeadId &&
+        !other.alreadyInKommo &&
+        other.saleDate >= row.saleDate,
+    );
+    const following = later && window.confirm(`Remover o lead #${row.kommoLeadId} também das próximas compras de ${row.customerName}?`);
     void mutate(
       row,
-      `/api/kommo/v4/sales/${row.id}/link`,
-      `Vínculo removido. A venda de ${row.customerName} volta a somar na receita.`,
+      `/api/kommo/v4/sales/${row.id}/link${following ? "?following=1" : ""}`,
+      (body) => {
+        const extra = Number(body.following) || 0;
+        return `Vínculo removido da venda de ${row.customerName}${extra ? ` e de ${extra} compra${extra === 1 ? "" : "s"} seguinte${extra === 1 ? "" : "s"}` : ""}.`;
+      },
       "Não consegui desvincular a venda.",
     );
   }
@@ -131,22 +143,12 @@ export function SpreadsheetSales({
             {formatInt(audit.count)} recompras · {formatBrl(audit.revenue)}
           </h2>
           <p className="mt-1 max-w-3xl text-sm text-mute">
-            Número da compra maior que 1, na data da venda{audit.batchFileName ? `, da planilha ${audit.batchFileName}` : ""} e das lançadas à mão. A busca acima também filtra esta lista. Vendas vinculadas a um negócio do Kommo ficam de fora do valor, porque o Kommo já conta.
+            Número da compra maior que 1, na data da venda{audit.batchFileName ? `, da planilha ${audit.batchFileName}` : ""} e das lançadas à mão. A busca acima também filtra esta lista. Vincule a primeira compra ao lead do cliente no Kommo e as próximas compras ao mesmo lead. Recompra vinculada continua somando, a não ser que o valor dela já esteja contado no Kommo.
           </p>
         </div>
         {addButton}
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          className={`chip ${view === "recompras" ? "chip-on" : ""}`}
-          onClick={() => {
-            setView("recompras");
-            setPage(1);
-          }}
-        >
-          Recompras
-        </button>
         <button
           type="button"
           className={`chip ${view === "todas" ? "chip-on" : ""}`}
@@ -155,11 +157,21 @@ export function SpreadsheetSales({
             setPage(1);
           }}
         >
-          Todas as vendas da planilha
+          Todas as vendas
+        </button>
+        <button
+          type="button"
+          className={`chip ${view === "recompras" ? "chip-on" : ""}`}
+          onClick={() => {
+            setView("recompras");
+            setPage(1);
+          }}
+        >
+          Só recompras
         </button>
         {audit.excludedCount > 0 ? (
           <span className="text-sm text-mute">
-            {formatInt(audit.excludedCount)} recompra{audit.excludedCount === 1 ? "" : "s"} já vinculada{audit.excludedCount === 1 ? "" : "s"} ao Kommo.
+            {formatInt(audit.excludedCount)} recompra{audit.excludedCount === 1 ? "" : "s"} com valor já contado no Kommo.
           </span>
         ) : null}
         {audit.manualCount > 0 ? (
@@ -216,7 +228,15 @@ export function SpreadsheetSales({
                           `#${row.kommoLeadId}`
                         )}
                         {row.kommoName ? ` ${row.kommoName}` : ""}
-                        <span className="block text-xs text-mute">{row.isRepurchase ? "Já contabilizada" : "Vinculada"}</span>
+                        <span className="block text-xs text-mute">
+                          {row.alreadyInKommo
+                            ? row.isRepurchase
+                              ? "Valor já contado no Kommo"
+                              : "Negócio desta venda"
+                            : row.isRepurchase
+                              ? "Lead do cliente · entra na soma"
+                              : "Lead do cliente"}
+                        </span>
                       </span>
                     ) : (
                       <span className="text-mute">{row.isRepurchase ? "Entra na soma" : "Sem vínculo"}</span>
@@ -259,7 +279,7 @@ export function SpreadsheetSales({
             </tbody>
           </table>
         ) : (
-          <p className="text-sm text-mute">{view === "recompras" ? "Nenhuma recompra neste recorte." : "Nenhuma venda da planilha neste recorte."}</p>
+          <p className="text-sm text-mute">{view === "recompras" ? "Nenhuma recompra neste recorte." : "Nenhuma venda neste recorte."}</p>
         )}
       </div>
       {pages > 1 ? (

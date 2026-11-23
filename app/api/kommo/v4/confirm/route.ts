@@ -4,25 +4,26 @@ import { relationMissing, rpcMissing } from "@/lib/kommo/rpcError";
 import { carriedForImport } from "@/lib/v4/carry";
 import { loadV4Suggestions } from "@/lib/v4/matches";
 import { fileHash, parseV4Workbook } from "@/lib/v4/parse";
-import { manualLinkedLeads } from "@/lib/v4/store";
+import { acceptImportLinks, allowFollowing, type ImportLink } from "@/lib/v4/links";
+import { manualLeadUses } from "@/lib/v4/store";
 
 export const dynamic = "force-dynamic";
 
 const MAX_BYTES = 8 * 1024 * 1024;
 
-type Link = { sourceRow?: unknown; kommoLeadId?: unknown };
+type Link = { sourceRow?: unknown; kommoLeadId?: unknown; alreadyInKommo?: unknown };
 
-function linksOf(raw: FormDataEntryValue | null): Map<number, number> {
+function linksOf(raw: FormDataEntryValue | null): Map<number, ImportLink> {
   if (typeof raw !== "string" || !raw.trim()) return new Map();
   try {
     const parsed = JSON.parse(raw) as Link[];
     if (!Array.isArray(parsed)) return new Map();
-    const links = new Map<number, number>();
+    const links = new Map<number, ImportLink>();
     for (const item of parsed) {
       const sourceRow = Number(item?.sourceRow);
       const leadId = Number(item?.kommoLeadId);
       if (Number.isInteger(sourceRow) && sourceRow > 0 && Number.isInteger(leadId) && leadId > 0) {
-        links.set(sourceRow, leadId);
+        links.set(sourceRow, { kommoLeadId: leadId, alreadyInKommo: item?.alreadyInKommo !== false });
       }
     }
     return links;
@@ -58,15 +59,13 @@ export async function POST(request: Request) {
     allowed.set(link.sourceRow, set);
   }
   const links = linksOf(form?.get("links") ?? null);
-  const taken = new Set(await manualLinkedLeads(reader.supabase).catch(() => []));
+  const accepted = acceptImportLinks(parsed.rows, links, allowFollowing(parsed.rows, links, allowed), await manualLeadUses(reader.supabase).catch(() => []));
   const rows = parsed.rows.map((row) => {
-    const leadId = links.get(row.sourceRow);
-    const accepted = leadId != null && !taken.has(leadId) && allowed.get(row.sourceRow)?.has(leadId);
-    if (accepted) taken.add(leadId);
+    const link = accepted.get(row.sourceRow);
     return {
       ...row,
-      kommoLeadId: accepted ? leadId : null,
-      alreadyInKommo: Boolean(accepted),
+      kommoLeadId: link?.kommoLeadId ?? null,
+      alreadyInKommo: link?.alreadyInKommo ?? false,
     };
   });
   const { data, error } = await reader.supabase.rpc("v4_commit_import", {

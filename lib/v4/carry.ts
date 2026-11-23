@@ -3,7 +3,7 @@ import { carryLinks, manualOverlaps, type ManualOverlap } from "./links";
 import { leadNames, manualSales, previousLinks } from "./store";
 import type { V4Candidate, V4Row, V4Suggestion } from "./types";
 
-export type CarriedLink = { sourceRow: number; candidate: V4Candidate };
+export type CarriedLink = { sourceRow: number; candidate: V4Candidate; alreadyInKommo: boolean };
 
 export async function carriedForImport(
   supabase: SupabaseClient,
@@ -14,12 +14,13 @@ export async function carriedForImport(
   let overlaps: ManualOverlap[] = [];
   try {
     const links = carryLinks(await previousLinks(supabase), rows);
-    const names = await leadNames(supabase, [...links.values()]);
-    carried = [...links].map(([sourceRow, leadId]) => {
+    const names = await leadNames(supabase, [...links.values()].map((link) => link.kommoLeadId));
+    carried = [...links].map(([sourceRow, { kommoLeadId: leadId, alreadyInKommo }]) => {
       const suggested = suggestions.find((item) => item.sourceRow === sourceRow)?.candidates.find((item) => item.id === leadId);
       const lead = names.get(leadId);
       return {
         sourceRow,
+        alreadyInKommo,
         candidate: suggested || {
           id: leadId,
           name: lead?.name || `Negócio ${leadId}`,
