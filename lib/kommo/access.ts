@@ -15,6 +15,14 @@ export async function commercialReader(): Promise<{ supabase: SupabaseClient } |
   return viewer;
 }
 
+export async function commercialEditor(): Promise<{ supabase: SupabaseClient; userId: string } | { error: string; status: number }> {
+  const viewer = await commercialViewer();
+  if ("error" in viewer) return viewer;
+  const { data } = await viewer.supabase.auth.getUser();
+  if (!data.user) return { error: "Entre para alterar as vendas.", status: 401 };
+  return { supabase: viewer.supabase, userId: data.user.id };
+}
+
 export function cronAuthorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET?.trim() || process.env.KOMMO_SYNC_SECRET?.trim() || "";
   if (!secret) return false;

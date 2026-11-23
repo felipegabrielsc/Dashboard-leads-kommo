@@ -2,6 +2,7 @@ import { commercialReader } from "@/lib/kommo/access";
 import { privateJson } from "@/lib/kommo/http";
 import { fileHash, parseV4Workbook } from "@/lib/v4/parse";
 import { loadV4Suggestions } from "@/lib/v4/matches";
+import { carriedForImport } from "@/lib/v4/carry";
 
 export const dynamic = "force-dynamic";
 
@@ -22,10 +23,13 @@ export async function POST(request: Request) {
     return privateJson({ error: "Não consegui ler esta planilha. Use um arquivo Excel .xlsx." }, 400);
   }
   const suggestions = await loadV4Suggestions(reader.supabase, parsed.rows);
+  const { carried, overlaps } = await carriedForImport(reader.supabase, parsed.rows, suggestions);
   return privateJson({
     fileName: file.name,
     fileHash: fileHash(bytes),
     ...parsed,
     suggestions,
+    carried,
+    manualOverlaps: overlaps,
   });
 }

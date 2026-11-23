@@ -49,6 +49,7 @@ export type V4SummaryView = {
   repurchaseTicket: number | null;
   estimatedProfit: number;
   excludedCount: number;
+  manualCount: number;
   customers: V4Customer[];
   batch: { fileName: string; importedAt: string; rowCount: number } | null;
   note: string;

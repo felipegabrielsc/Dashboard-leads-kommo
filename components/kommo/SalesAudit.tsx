@@ -8,6 +8,7 @@ import type { CommercialReport, PublicSync, SaleRow } from "@/lib/kommo/types";
 import { DashboardFilters } from "./DashboardFilters";
 import { KommoShell } from "./KommoShell";
 import { SalesTable } from "./SalesTable";
+import { SpreadsheetSales } from "./SpreadsheetSales";
 import { SetupChecklist } from "./SetupChecklist";
 import { SyncStatus } from "./SyncStatus";
 import { readViewCache, writeViewCache } from "@/lib/kommo/viewCache";
@@ -30,6 +31,7 @@ type SalesResponse = {
   notice: string;
   error: string;
   repurchases?: RepurchaseAudit;
+  canEdit?: boolean;
 };
 
 export function SalesAudit() {
@@ -39,6 +41,7 @@ export function SalesAudit() {
   const [failure, setFailure] = useState("");
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState(query.q);
+  const [version, setVersion] = useState(0);
 
   useEffect(() => setDraft(query.q), [query.q]);
 
@@ -93,7 +96,7 @@ export function SalesAudit() {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [query.from, query.page, query.pipeline, query.q, query.to, query.user]);
+  }, [query.from, query.page, query.pipeline, query.q, query.to, query.user, version]);
 
   const painelHref = `/kommo?${query.query}`;
   const vendasHref = `/kommo/vendas?${query.query}`;
@@ -177,86 +180,17 @@ export function SalesAudit() {
         ) : null}
         {failure && status !== 401 && !blocked ? <p className="mt-3 text-sm text-wine">{failure}</p> : null}
       </section>
-      {!blocked && data?.repurchases?.ready ? (
-        <RepurchaseList audit={data.repurchases} importHref={importHref} />
+      {data?.repurchases?.ready && status !== 401 ? (
+        <SpreadsheetSales
+          audit={data.repurchases}
+          importHref={importHref}
+          canEdit={Boolean(data.canEdit)}
+          kommoReady={!blocked}
+          sellers={(data.users || []).map((user) => user.name)}
+          loginHref={`/login?next=${encodeURIComponent(vendasHref)}`}
+          onChanged={() => setVersion((current) => current + 1)}
+        />
       ) : null}
     </KommoShell>
-  );
-}
-
-function RepurchaseList({ audit, importHref }: { audit: RepurchaseAudit; importHref: string }) {
-  const [page, setPage] = useState(1);
-  const pageSize = 50;
-  const pages = Math.max(1, Math.ceil(audit.rows.length / pageSize));
-  const current = Math.min(page, pages);
-  const visible = audit.rows.slice((current - 1) * pageSize, current * pageSize);
-  if (!audit.imported) {
-    return (
-      <section className="panel p-5">
-        <h2 className="font-serif text-2xl">Recompras</h2>
-        <p className="mt-2 text-sm text-mute">Nenhuma planilha ativa. Importe as vendas para listar as recompras junto com as vendas.</p>
-        <Link href={importHref} className="btn btn-primary mt-4">
-          Importar planilha
-        </Link>
-      </section>
-    );
-  }
-  return (
-    <section className="panel p-5">
-      <h2 className="font-serif text-2xl">
-        {formatInt(audit.count)} recompras · {formatBrl(audit.revenue)}
-      </h2>
-      <p className="mt-1 text-sm text-mute">
-        Número da compra maior que 1, na data da venda. A busca acima também filtra esta lista. Recompras marcadas como já registradas no Kommo aparecem aqui e ficam de fora do valor.
-      </p>
-      {audit.excludedCount > 0 ? (
-        <p className="mt-2 text-sm text-mute">
-          {formatInt(audit.excludedCount)} marcada{audit.excludedCount === 1 ? "" : "s"} como já presente no Kommo.
-        </p>
-      ) : null}
-      <div className="mt-4 max-w-full overflow-x-auto">
-        {audit.rows.length ? (
-          <table className="w-full min-w-[46rem] text-left text-sm">
-            <thead className="text-xs uppercase tracking-wide text-mute">
-              <tr>
-                <th className="py-2 pr-3 font-medium">Data</th>
-                <th className="py-2 pr-3 font-medium">Cliente</th>
-                <th className="py-2 pr-3 font-medium">Valor</th>
-                <th className="py-2 pr-3 font-medium">Compra</th>
-                <th className="py-2 pr-3 font-medium">Vendedor</th>
-                <th className="py-2 font-medium">No Kommo</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visible.map((row) => (
-                <tr key={row.id} className="border-t border-line">
-                  <td className="py-2 pr-3">{formatDate(row.saleDate)}</td>
-                  <td className="py-2 pr-3">{row.customerName}</td>
-                  <td className="py-2 pr-3">{formatBrl(row.amount)}</td>
-                  <td className="py-2 pr-3">{row.purchaseNumber}</td>
-                  <td className="py-2 pr-3">{row.sellerName || "—"}</td>
-                  <td className="py-2">{row.alreadyInKommo ? "Já contabilizada" : "Entra na soma"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <p className="text-sm text-mute">Nenhuma recompra neste recorte.</p>
-        )}
-      </div>
-      {pages > 1 ? (
-        <div className="mt-4 flex items-center gap-2">
-          <button type="button" className="btn" disabled={current <= 1} onClick={() => setPage(current - 1)}>
-            Anterior
-          </button>
-          <span className="text-sm text-mute">
-            Página {current} de {pages}
-          </span>
-          <button type="button" className="btn" disabled={current >= pages} onClick={() => setPage(current + 1)}>
-            Próxima
-          </button>
-        </div>
-      ) : null}
-    </section>
   );
 }

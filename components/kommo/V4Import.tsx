@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { formatBrl, formatDate, formatInt } from "@/lib/format";
-import type { V4Issue, V4Row, V4Suggestion } from "@/lib/v4/types";
+import type { V4Candidate, V4Issue, V4Row, V4Suggestion } from "@/lib/v4/types";
 import { KommoShell } from "./KommoShell";
 import { commercialSearch } from "./query";
 import { useCommercialQuery } from "./useCommercialQuery";
@@ -22,6 +22,11 @@ type Preview = {
     repurchaseAmount: number;
   };
   suggestions: V4Suggestion[];
+  carried?: { sourceRow: number; candidate: V4Candidate }[];
+  manualOverlaps?: {
+    sourceRow: number;
+    manual: { id: string; saleDate: string; customerName: string; amount: number; purchaseNumber: number };
+  }[];
 };
 
 type Batch = {
@@ -97,9 +102,14 @@ export function V4Import() {
         const first = suggestion.candidates[0];
         if (first) selection[suggestion.sourceRow] = first.id;
       }
+      const carriedMarks: Record<number, boolean> = {};
+      for (const link of next.carried || []) {
+        selection[link.sourceRow] = link.candidate.id;
+        carriedMarks[link.sourceRow] = true;
+      }
       fileRef.current = file;
       setPicked(selection);
-      setMarked({});
+      setMarked(carriedMarks);
       setPreview(next);
     } catch {
       setError("Não consegui ler a planilha.");
@@ -127,7 +137,7 @@ export function V4Import() {
         setError(typeof body.error === "string" ? body.error : "Não consegui gravar a importação.");
         return;
       }
-      setMessage("Importação gravada. A planilha anterior, se existia, deixou de entrar na soma.");
+      setMessage("Importação gravada. A planilha anterior, se existia, deixou de entrar na soma. Recompras lançadas à mão continuam valendo.");
       setPreview(null);
       fileRef.current = null;
       await loadBatches();
@@ -139,6 +149,11 @@ export function V4Import() {
   }
 
   const suggestions = new Map((preview?.suggestions || []).map((item) => [item.sourceRow, item.candidates]));
+  for (const link of preview?.carried || []) {
+    const list = suggestions.get(link.sourceRow) || [];
+    if (!list.some((candidate) => candidate.id === link.candidate.id)) suggestions.set(link.sourceRow, [link.candidate, ...list]);
+  }
+  const carriedRows = new Set((preview?.carried || []).map((link) => link.sourceRow));
 
   return (
     <KommoShell
@@ -215,6 +230,28 @@ export function V4Import() {
               </ul>
             </div>
           ) : null}
+          {preview.manualOverlaps?.length ? (
+            <div>
+              <h3 className="text-sm font-semibold">Recompras já lançadas à mão</h3>
+              <p className="mt-1 text-sm text-mute">
+                A recompra manual continua somando depois da importação. Se a planilha traz a mesma venda, exclua a manual em Vendas para não contar duas vezes.
+              </p>
+              <ul className="mt-2 space-y-1 text-sm text-wine">
+                {preview.manualOverlaps.map((item) => (
+                  <li key={`${item.sourceRow}-${item.manual.id}`}>
+                    Linha {item.sourceRow}: {item.manual.customerName}, {item.manual.purchaseNumber}ª compra em {formatDate(item.manual.saleDate)} ·{" "}
+                    {formatBrl(item.manual.amount)} já foi lançada à mão.
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {carriedRows.size ? (
+            <p className="text-sm text-mute">
+              {formatInt(carriedRows.size)} venda{carriedRows.size === 1 ? "" : "s"} já vinculada{carriedRows.size === 1 ? "" : "s"} na planilha ativa
+              {carriedRows.size === 1 ? " veio marcada" : " vieram marcadas"} com o mesmo negócio do Kommo.
+            </p>
+          ) : null}
           <div className="max-w-full overflow-x-auto">
             <table className="w-full min-w-[64rem] text-left text-sm">
               <thead className="text-xs uppercase tracking-wide text-mute">
@@ -253,7 +290,11 @@ export function V4Import() {
                               {candidates.map((candidate) => (
                                 <option key={candidate.id} value={candidate.id}>
                                   #{candidate.id} {candidate.name}
-                                  {candidate.strong ? " · nome parecido" : ""}
+                                  {carriedRows.has(row.sourceRow) && picked[row.sourceRow] === candidate.id
+                                    ? " · vínculo atual"
+                                    : candidate.strong
+                                      ? " · nome parecido"
+                                      : ""}
                                 </option>
                               ))}
                             </select>

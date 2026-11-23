@@ -3,6 +3,7 @@ import { parseCommercialFilters } from "../kommo/filters";
 import { relationMissing } from "../kommo/rpcError";
 import { roundMoney } from "./parse";
 import { sellerMatches } from "./consolidate";
+import { activeBatch, currentSales, leadNames, manualReady, type SaleSource } from "./store";
 
 export type RepurchaseLine = {
   id: string;
@@ -10,28 +11,40 @@ export type RepurchaseLine = {
   customerName: string;
   amount: number;
   purchaseNumber: number;
+  isRepurchase: boolean;
   sellerName: string;
+  profit: number | null;
+  source: SaleSource;
   alreadyInKommo: boolean;
+  kommoLeadId: number | null;
+  kommoName: string;
+  kommoUrl: string;
 };
 
 export type RepurchaseAudit = {
   ready: boolean;
   imported: boolean;
+  manualReady: boolean;
+  batchFileName: string;
   rows: RepurchaseLine[];
   count: number;
   revenue: number;
   ticket: number | null;
   excludedCount: number;
+  manualCount: number;
 };
 
 const emptyAudit = (partial: Partial<RepurchaseAudit> = {}): RepurchaseAudit => ({
   ready: false,
   imported: false,
+  manualReady: false,
+  batchFileName: "",
   rows: [],
   count: 0,
   revenue: 0,
   ticket: null,
   excludedCount: 0,
+  manualCount: 0,
   ...partial,
 });
 
@@ -44,64 +57,67 @@ export async function loadRepurchaseAudit(
   if ("error" in filters) return emptyAudit();
   const seller = users.find((user) => user.id === filters.userId)?.name || "";
   const query = (search.get("q") || "").trim().toLowerCase();
+  let batch;
+  let manual = false;
   try {
-    const batchResult = await supabase
-      .from("v4_import_batches")
-      .select("id")
-      .eq("status", "active")
-      .order("imported_at", { ascending: false })
-      .limit(1);
-    if (batchResult.error) {
-      if (relationMissing(batchResult.error)) return emptyAudit();
-      return emptyAudit({ ready: true });
-    }
-    const batch = batchResult.data?.[0];
-    if (!batch) return emptyAudit({ ready: true, imported: false });
-    const rows: RepurchaseLine[] = [];
-    const pageSize = 1000;
-    for (let start = 0; ; start += pageSize) {
-      const { data, error } = await supabase
-        .from("v4_sales")
-        .select("id,sale_date,customer_name,amount,purchase_number,seller_name,already_in_kommo")
-        .eq("import_batch_id", batch.id)
-        .eq("is_repurchase", true)
-        .gte("sale_date", filters.from)
-        .lte("sale_date", filters.to)
-        .order("sale_date", { ascending: false })
-        .order("id")
-        .range(start, start + pageSize - 1);
-      if (error) return emptyAudit({ ready: true, imported: true });
-      for (const row of data || []) {
-        rows.push({
-          id: String(row.id),
-          saleDate: String(row.sale_date || ""),
-          customerName: String(row.customer_name || ""),
-          amount: Number(row.amount) || 0,
-          purchaseNumber: Number(row.purchase_number) || 0,
-          sellerName: String(row.seller_name || ""),
-          alreadyInKommo: Boolean(row.already_in_kommo),
-        });
-      }
-      if (!data || data.length < pageSize) break;
-    }
+    batch = await activeBatch(supabase);
+    manual = await manualReady(supabase);
+  } catch (error) {
+    if (relationMissing(error)) return emptyAudit();
+    return emptyAudit({ ready: true });
+  }
+  const base = { ready: true, manualReady: manual, batchFileName: batch?.file_name || "" };
+  try {
+    const sales = await currentSales(supabase, { batchId: batch?.id || null, manual }, { from: filters.from, to: filters.to });
+    const names = await leadNames(
+      supabase,
+      sales.flatMap((row) => (row.kommo_lead_id == null ? [] : [Number(row.kommo_lead_id)])),
+    );
+    const rows: RepurchaseLine[] = sales.map((row) => {
+      const leadId = row.kommo_lead_id == null ? null : Number(row.kommo_lead_id);
+      const lead = leadId == null ? undefined : names.get(leadId);
+      return {
+        id: String(row.id),
+        saleDate: String(row.sale_date || ""),
+        customerName: String(row.customer_name || ""),
+        amount: Number(row.amount) || 0,
+        purchaseNumber: Number(row.purchase_number) || 0,
+        isRepurchase: Boolean(row.is_repurchase),
+        sellerName: String(row.seller_name || ""),
+        profit: row.profit == null ? null : Number(row.profit),
+        source: row.source,
+        alreadyInKommo: Boolean(row.already_in_kommo),
+        kommoLeadId: leadId,
+        kommoName: lead?.name || "",
+        kommoUrl: lead?.url || "",
+      };
+    });
     const filtered = rows.filter((row) => {
       if (seller && !sellerMatches(row.sellerName, seller)) return false;
       if (!query) return true;
-      return row.customerName.toLowerCase().includes(query) || row.sellerName.toLowerCase().includes(query);
+      return (
+        row.customerName.toLowerCase().includes(query) ||
+        row.sellerName.toLowerCase().includes(query) ||
+        row.kommoName.toLowerCase().includes(query) ||
+        String(row.kommoLeadId || "") === query
+      );
     });
-    const included = filtered.filter((row) => !row.alreadyInKommo);
+    const repurchases = filtered.filter((row) => row.isRepurchase);
+    const included = repurchases.filter((row) => !row.alreadyInKommo);
     const revenue = roundMoney(included.reduce((sum, row) => sum + row.amount, 0));
+    const manualCount = repurchases.filter((row) => row.source === "manual").length;
     return {
-      ready: true,
-      imported: true,
+      ...base,
+      imported: Boolean(batch) || rows.some((row) => row.source === "manual"),
       rows: filtered,
       count: included.length,
       revenue,
       ticket: included.length ? roundMoney(revenue / included.length) : null,
-      excludedCount: filtered.filter((row) => row.alreadyInKommo).length,
+      excludedCount: repurchases.filter((row) => row.alreadyInKommo).length,
+      manualCount,
     };
   } catch (error) {
     if (relationMissing(error)) return emptyAudit();
-    return emptyAudit({ ready: true });
+    return emptyAudit({ ...base, imported: Boolean(batch) });
   }
 }
