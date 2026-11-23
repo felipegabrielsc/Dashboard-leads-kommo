@@ -61,7 +61,7 @@ export function V4Panel({ summary, importHref }: { summary: V4SummaryView; impor
         <MetricCard
           label="Receita de recompras"
           value={formatBrl(summary.repurchaseRevenue)}
-          hint="Recompras do período que não foram marcadas como já registradas no Kommo."
+          hint="Recompras do período, da planilha e lançadas à mão, que não estão vinculadas a um negócio do Kommo."
         />
         <MetricCard
           label="Receita consolidada"
