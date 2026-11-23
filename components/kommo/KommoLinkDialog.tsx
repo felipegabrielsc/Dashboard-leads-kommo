@@ -21,6 +21,9 @@ export function KommoLinkDialog({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<number | null>(null);
+  const [followingCount, setFollowingCount] = useState(0);
+  const [counted, setCounted] = useState(sale.kommoLeadId ? sale.alreadyInKommo : !sale.isRepurchase);
+  const [following, setFollowing] = useState(true);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -51,6 +54,7 @@ export function KommoLinkDialog({
         }
         setCandidates(Array.isArray(body.candidates) ? body.candidates : []);
         setWindowRange(body.window || null);
+        setFollowingCount(Number(body.followingCount) || 0);
       })
       .catch((reason: unknown) => {
         if (reason instanceof DOMException && reason.name === "AbortError") return;
@@ -69,14 +73,18 @@ export function KommoLinkDialog({
       const response = await fetch(`/api/kommo/v4/sales/${sale.id}/link`, {
         method: "PUT",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ kommoLeadId: candidate.id }),
+        body: JSON.stringify({ kommoLeadId: candidate.id, counted, following: following && followingCount > 0 }),
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) {
         setError(typeof body.error === "string" ? body.error : "Não consegui vincular a venda.");
         return;
       }
-      onSaved(`Venda de ${sale.customerName} vinculada ao negócio #${candidate.id}. Ela não soma de novo na receita.`);
+      const extra = Number(body.following) || 0;
+      onSaved(
+        `Venda de ${sale.customerName} vinculada ao negócio #${candidate.id}${counted ? ", com o valor já contado no Kommo" : ""}.` +
+          (extra ? ` ${extra} compra${extra === 1 ? "" : "s"} seguinte${extra === 1 ? "" : "s"} deste cliente também ${extra === 1 ? "foi vinculada" : "foram vinculadas"}.` : ""),
+      );
     } catch {
       setError("Não consegui vincular a venda.");
     } finally {
@@ -109,8 +117,30 @@ export function KommoLinkDialog({
         </div>
         <div className="flex-1 space-y-4 overflow-y-auto px-5 py-5">
           <p className="text-sm text-mute">
-            Escolha o negócio ganho que já registrou esta venda. Vinculada, a venda deixa de somar na receita consolidada, porque o Kommo já conta o valor.
+            Escolha o lead ganho deste cliente no Kommo. A primeira compra e as próximas do mesmo cliente podem usar o mesmo lead.
           </p>
+          <div className="space-y-2 rounded-2xl border border-line p-3 text-sm">
+            <label className="flex items-start gap-2">
+              <input type="checkbox" className="mt-1" checked={counted} onChange={(event) => setCounted(event.target.checked)} />
+              <span>
+                O Kommo já conta o valor desta venda neste negócio
+                <span className="block text-xs text-mute">
+                  {sale.isRepurchase
+                    ? "Marque só se a recompra virou um negócio próprio no Kommo. Marcada, ela sai da receita de recompras."
+                    : "Normal para a primeira compra: o negócio ganho é esta venda."}
+                </span>
+              </span>
+            </label>
+            {followingCount > 0 ? (
+              <label className="flex items-start gap-2">
+                <input type="checkbox" className="mt-1" checked={following} onChange={(event) => setFollowing(event.target.checked)} />
+                <span>
+                  Vincular também {followingCount === 1 ? "a próxima compra" : `as próximas ${followingCount} compras`} deste cliente ao mesmo lead
+                  <span className="block text-xs text-mute">As recompras continuam somando na receita.</span>
+                </span>
+              </label>
+            ) : null}
+          </div>
           <label className="block text-sm">
             Buscar negócio ganho por nome ou ID
             <input className="field mt-1" value={term} onChange={(event) => setTerm(event.target.value)} autoFocus />
@@ -127,7 +157,8 @@ export function KommoLinkDialog({
           ) : null}
           <ul className="space-y-2">
             {candidates.map((candidate) => {
-              const current = sale.kommoLeadId === candidate.id;
+              const current = sale.kommoLeadId === candidate.id && sale.alreadyInKommo === counted;
+              const blocked = Boolean(candidate.otherCustomer) || (counted && Boolean(candidate.countedSaleId));
               return (
                 <li key={candidate.id} className="rounded-2xl border border-line p-3">
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -146,13 +177,17 @@ export function KommoLinkDialog({
                         {candidate.dayGap === 0 ? <span className="chip chip-on">Mesmo dia</span> : null}
                         {candidate.dayGap > 0 ? <span className="chip">{candidate.dayGap} dia{candidate.dayGap === 1 ? "" : "s"} de diferença</span> : null}
                         {candidate.nameMatch ? <span className="chip chip-on">Nome parecido</span> : null}
-                        {candidate.linkedSaleId ? <span className="chip text-wine">Já vinculado a outra venda</span> : null}
+                        {candidate.customerLead ? <span className="chip chip-on">Lead deste cliente</span> : null}
+                        {candidate.otherCustomer ? <span className="chip text-wine">Vinculado a {candidate.otherCustomer}</span> : null}
+                        {!candidate.otherCustomer && candidate.countedSaleId ? (
+                          <span className="chip">Valor já contado em outra venda</span>
+                        ) : null}
                       </div>
                     </div>
                     <button
                       type="button"
                       className="btn btn-primary"
-                      disabled={busy != null || current || Boolean(candidate.linkedSaleId)}
+                      disabled={busy != null || current || blocked}
                       onClick={() => void link(candidate)}
                     >
                       {current ? "Vinculado" : busy === candidate.id ? "Vinculando…" : "Vincular"}
