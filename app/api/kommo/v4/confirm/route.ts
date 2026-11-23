@@ -1,8 +1,10 @@
 import { commercialReader } from "@/lib/kommo/access";
 import { privateJson } from "@/lib/kommo/http";
 import { relationMissing, rpcMissing } from "@/lib/kommo/rpcError";
+import { carriedForImport } from "@/lib/v4/carry";
 import { loadV4Suggestions } from "@/lib/v4/matches";
 import { fileHash, parseV4Workbook } from "@/lib/v4/parse";
+import { manualLinkedLeads } from "@/lib/v4/store";
 
 export const dynamic = "force-dynamic";
 
@@ -45,14 +47,22 @@ export async function POST(request: Request) {
   }
   if (!parsed.rows.length) return privateJson({ error: "A planilha não tem vendas válidas para gravar." }, 400);
   const suggestions = await loadV4Suggestions(reader.supabase, parsed.rows);
+  const { carried } = await carriedForImport(reader.supabase, parsed.rows, suggestions);
   const allowed = new Map<number, Set<number>>();
   for (const suggestion of suggestions) {
     allowed.set(suggestion.sourceRow, new Set(suggestion.candidates.map((candidate) => candidate.id)));
   }
+  for (const link of carried) {
+    const set = allowed.get(link.sourceRow) || new Set<number>();
+    set.add(link.candidate.id);
+    allowed.set(link.sourceRow, set);
+  }
   const links = linksOf(form?.get("links") ?? null);
+  const taken = new Set(await manualLinkedLeads(reader.supabase).catch(() => []));
   const rows = parsed.rows.map((row) => {
     const leadId = links.get(row.sourceRow);
-    const accepted = leadId != null && allowed.get(row.sourceRow)?.has(leadId);
+    const accepted = leadId != null && !taken.has(leadId) && allowed.get(row.sourceRow)?.has(leadId);
+    if (accepted) taken.add(leadId);
     return {
       ...row,
       kommoLeadId: accepted ? leadId : null,

@@ -43,8 +43,12 @@ export function V4Panel({ summary, importHref }: { summary: V4SummaryView; impor
         <div>
           <h2 className="font-serif text-2xl">Recompras</h2>
           <p className="mt-1 text-sm text-mute">
-            Planilha {summary.batch?.fileName || "ativa"}
-            {summary.batch?.importedAt ? `, importada em ${when(summary.batch.importedAt)}` : ""}. Primeira compra fica de fora desta soma.
+            {summary.batch ? `Planilha ${summary.batch.fileName || "ativa"}` : "Sem planilha ativa"}
+            {summary.batch?.importedAt ? `, importada em ${when(summary.batch.importedAt)}` : ""}
+            {summary.manualCount > 0
+              ? `, mais ${formatInt(summary.manualCount)} recompra${summary.manualCount === 1 ? "" : "s"} lançada${summary.manualCount === 1 ? "" : "s"} à mão`
+              : ""}
+            . Primeira compra fica de fora desta soma.
           </p>
         </div>
         <Link href={importHref} className="btn">
@@ -78,8 +82,8 @@ export function V4Panel({ summary, importHref }: { summary: V4SummaryView; impor
       </div>
       {summary.excludedCount > 0 ? (
         <p className="text-sm text-mute">
-          {formatInt(summary.excludedCount)} recompra{summary.excludedCount === 1 ? "" : "s"} marcada
-          {summary.excludedCount === 1 ? "" : "s"} como já presente no Kommo ficou de fora da receita consolidada.
+          {formatInt(summary.excludedCount)} recompra{summary.excludedCount === 1 ? "" : "s"} vinculada
+          {summary.excludedCount === 1 ? "" : "s"} a negócio do Kommo {summary.excludedCount === 1 ? "ficou" : "ficaram"} de fora da receita consolidada.
         </p>
       ) : null}
       <article className="panel min-w-0 p-5">

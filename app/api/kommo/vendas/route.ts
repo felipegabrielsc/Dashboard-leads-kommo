@@ -15,9 +15,10 @@ export async function GET(request: Request) {
   const read = await readCommercial(reader.supabase, search);
   if (!read.ok) return privateJson({ error: read.error }, read.status);
   const page = Math.max(1, Math.floor(Number(search.get("page")) || 1));
-  const [paged, repurchases] = await Promise.all([
+  const [paged, repurchases, session] = await Promise.all([
     loadPagedSales(reader.supabase, search, read.report?.sales || [], read.aggregated, page, PAGE_SIZE),
     loadRepurchaseAudit(reader.supabase, search, read.users),
+    reader.supabase.auth.getUser(),
   ]);
   return privateJson({
     ...read,
@@ -29,5 +30,6 @@ export async function GET(request: Request) {
     page: paged.page,
     pageSize: paged.pageSize,
     repurchases,
+    canEdit: Boolean(session.data.user),
   });
 }

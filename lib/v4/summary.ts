@@ -1,36 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { parseCommercialFilters } from "../kommo/filters";
 import { relationMissing } from "../kommo/rpcError";
-import { summarizePurchases, type PurchaseSlice } from "./consolidate";
+import { sellerMatches, summarizePurchases, type PurchaseSlice } from "./consolidate";
+import { activeBatch, currentSales, manualReady } from "./store";
 import type { V4SummaryView } from "./types";
-
-async function selectPeriodSales(supabase: SupabaseClient, batchId: string, from: string, to: string) {
-  const rows: {
-    customer_name: string | null;
-    customer_key: string | null;
-    amount: number | string | null;
-    is_repurchase: boolean | null;
-    seller_name: string | null;
-    profit: number | string | null;
-    already_in_kommo: boolean | null;
-  }[] = [];
-  const pageSize = 1000;
-  for (let start = 0; ; start += pageSize) {
-    const { data, error } = await supabase
-      .from("v4_sales")
-      .select("customer_name,customer_key,amount,is_repurchase,seller_name,profit,already_in_kommo")
-      .eq("import_batch_id", batchId)
-      .gte("sale_date", from)
-      .lte("sale_date", to)
-      .order("sale_date")
-      .order("id")
-      .range(start, start + pageSize - 1);
-    if (error) return { data: rows, error };
-    rows.push(...(data || []));
-    if (!data || data.length < pageSize) break;
-  }
-  return { data: rows, error: null };
-}
 
 function emptySummary(partial: Partial<V4SummaryView> = {}): V4SummaryView {
   return {
@@ -43,6 +16,7 @@ function emptySummary(partial: Partial<V4SummaryView> = {}): V4SummaryView {
     repurchaseTicket: null,
     estimatedProfit: 0,
     excludedCount: 0,
+    manualCount: 0,
     customers: [],
     batch: null,
     note: "",
@@ -59,41 +33,21 @@ export async function loadV4Summary(
   const filters = parseCommercialFilters(search);
   if ("error" in filters) return emptySummary({ note: filters.error, kommoRevenue, consolidatedRevenue: kommoRevenue });
   const seller = users.find((user) => user.id === filters.userId)?.name || "";
+  let batch;
+  let manual = false;
   try {
-    const batchResult = await supabase
-      .from("v4_import_batches")
-      .select("id,file_name,imported_at,row_count")
-      .eq("status", "active")
-      .order("imported_at", { ascending: false })
-      .limit(1);
-    if (batchResult.error) {
-      if (relationMissing(batchResult.error)) return emptySummary({ kommoRevenue, consolidatedRevenue: kommoRevenue });
-      return emptySummary({
-        ready: true,
-        kommoRevenue,
-        consolidatedRevenue: kommoRevenue,
-        note: "Não consegui ler as recompras.",
-      });
-    }
-    const batch = batchResult.data?.[0];
-    if (!batch) return emptySummary({ ready: true, kommoRevenue, consolidatedRevenue: kommoRevenue });
-    const salesResult = await selectPeriodSales(supabase, String(batch.id), filters.from, filters.to);
-    const batchView = {
-      fileName: String(batch.file_name || ""),
-      importedAt: String(batch.imported_at || ""),
-      rowCount: Number(batch.row_count) || 0,
-    };
-    if (salesResult.error) {
-      return emptySummary({
-        ready: true,
-        imported: true,
-        kommoRevenue,
-        consolidatedRevenue: kommoRevenue,
-        batch: batchView,
-        note: "Não consegui ler as recompras deste período.",
-      });
-    }
-    const rows: PurchaseSlice[] = (salesResult.data || []).map((row) => ({
+    batch = await activeBatch(supabase);
+    manual = await manualReady(supabase);
+  } catch (error) {
+    if (relationMissing(error)) return emptySummary({ kommoRevenue, consolidatedRevenue: kommoRevenue });
+    return emptySummary({ ready: true, kommoRevenue, consolidatedRevenue: kommoRevenue, note: "Não consegui ler as recompras." });
+  }
+  const batchView = batch ? { fileName: batch.file_name, importedAt: batch.imported_at, rowCount: batch.row_count } : null;
+  try {
+    const sales = await currentSales(supabase, { batchId: batch?.id || null, manual }, { from: filters.from, to: filters.to });
+    const hasManual = sales.some((row) => row.source === "manual");
+    if (!batch && !hasManual) return emptySummary({ ready: true, kommoRevenue, consolidatedRevenue: kommoRevenue });
+    const rows: PurchaseSlice[] = sales.map((row) => ({
       customerName: String(row.customer_name || ""),
       customerKey: String(row.customer_key || ""),
       amount: Number(row.amount) || 0,
@@ -102,15 +56,26 @@ export async function loadV4Summary(
       profit: row.profit == null ? null : Number(row.profit),
       alreadyInKommo: Boolean(row.already_in_kommo),
     }));
+    const manualCount = sales.filter(
+      (row) => row.source === "manual" && !row.already_in_kommo && (!seller || sellerMatches(String(row.seller_name || ""), seller)),
+    ).length;
     return {
       ready: true,
       imported: true,
       ...summarizePurchases(rows, kommoRevenue, seller || null),
+      manualCount,
       batch: batchView,
       note: "",
     };
   } catch (error) {
     if (relationMissing(error)) return emptySummary({ kommoRevenue, consolidatedRevenue: kommoRevenue });
-    return emptySummary({ ready: true, kommoRevenue, consolidatedRevenue: kommoRevenue, note: "Não consegui ler as recompras." });
+    return emptySummary({
+      ready: true,
+      imported: Boolean(batch),
+      kommoRevenue,
+      consolidatedRevenue: kommoRevenue,
+      batch: batchView,
+      note: "Não consegui ler as recompras deste período.",
+    });
   }
 }
