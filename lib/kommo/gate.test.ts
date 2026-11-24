@@ -19,6 +19,7 @@ assert.equal(kommoGate("/api/kommo/v4/sales/abc", "DELETE", false), "unauthorize
 assert.equal(kommoGate("/api/kommo/v4/sales/abc/link", "GET", false), "unauthorized");
 assert.equal(kommoGate("/api/kommo/v4/sales/abc/link", "PUT", false), "unauthorized");
 assert.equal(kommoGate("/api/kommo/v4/sales/abc/link", "PUT", true), "allow");
+assert.equal(kommoGate("/api/kommo/v4/batches/abc", "DELETE", false), "unauthorized");
 
 assert.equal(kommoGate("/kommo/configuracoes", "GET", true), "allow");
 assert.equal(kommoGate("/", "GET", false), "allow");

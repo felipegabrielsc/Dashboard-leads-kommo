@@ -65,6 +65,7 @@ export function V4Import() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [removing, setRemoving] = useState("");
 
   const painelHref = `/kommo?${query.query}`;
   const vendasHref = `/kommo/vendas?${commercialSearch({ from: query.from, to: query.to, pipeline: query.pipeline, user: query.user })}`;
@@ -78,6 +79,36 @@ export function V4Import() {
     }
     setReady(body.ready !== false);
     setBatches(Array.isArray(body.batches) ? body.batches : []);
+  }
+
+  async function removeBatch(batch: Batch) {
+    const label = batch.fileName || "esta planilha";
+    const confirmText =
+      batch.status === "active"
+        ? `Remover a planilha ativa "${label}"? As vendas importadas deixam de entrar na conta. Recompras lançadas à mão continuam.`
+        : `Remover "${label}" do histórico?`;
+    if (!window.confirm(confirmText)) return;
+    setRemoving(batch.id);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch(`/api/kommo/v4/batches/${batch.id}`, { method: "DELETE" });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(typeof body.error === "string" ? body.error : "Não consegui remover a planilha.");
+        return;
+      }
+      setMessage(
+        batch.status === "active"
+          ? `Planilha "${label}" removida. Importe outra quando quiser voltar a somar essas vendas.`
+          : `Planilha "${label}" removida do histórico.`,
+      );
+      await loadBatches();
+    } catch {
+      setError("Não consegui remover a planilha.");
+    } finally {
+      setRemoving("");
+    }
   }
 
   useEffect(() => {
@@ -356,18 +387,22 @@ export function V4Import() {
 
       <section className="panel p-5">
         <h2 className="font-serif text-2xl">Histórico</h2>
+        <p className="mt-2 text-sm text-mute">
+          Remover a planilha ativa apaga as vendas importadas da conta. Recompras lançadas à mão em Vendas não são apagadas.
+        </p>
         {!ready ? (
           <p className="mt-2 text-sm text-mute">Execute supabase/v4-vendas.sql no SQL Editor para guardar as importações.</p>
         ) : batches.length ? (
           <div className="mt-4 max-w-full overflow-x-auto">
-            <table className="w-full min-w-[46rem] text-left text-sm">
+            <table className="w-full min-w-[52rem] text-left text-sm">
               <thead className="text-xs uppercase tracking-wide text-mute">
                 <tr>
                   <th className="py-2 pr-3 font-medium">Quando</th>
                   <th className="py-2 pr-3 font-medium">Arquivo</th>
                   <th className="py-2 pr-3 font-medium">Situação</th>
                   <th className="py-2 pr-3 font-medium">Registros</th>
-                  <th className="py-2 font-medium">Recompras</th>
+                  <th className="py-2 pr-3 font-medium">Recompras</th>
+                  <th className="py-2 font-medium">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -379,8 +414,18 @@ export function V4Import() {
                     <td className="py-2 pr-3">
                       {formatInt(batch.rowCount)} · {formatBrl(batch.totalAmount)}
                     </td>
-                    <td className="py-2">
+                    <td className="py-2 pr-3">
                       {formatInt(batch.repurchaseCount)} · {formatBrl(batch.repurchaseAmount)}
+                    </td>
+                    <td className="py-2">
+                      <button
+                        type="button"
+                        className="btn"
+                        disabled={busy || removing === batch.id}
+                        onClick={() => void removeBatch(batch)}
+                      >
+                        {removing === batch.id ? "Removendo…" : "Remover"}
+                      </button>
                     </td>
                   </tr>
                 ))}
