@@ -41,6 +41,11 @@ export function candidateWindow(saleDate: string): { from: string; to: string } 
   return { from: addDays(saleDate, -CANDIDATE_WINDOW_DAYS), to: addDays(saleDate, CANDIDATE_WINDOW_DAYS) };
 }
 
+/** Início inclusivo e fim exclusivo em UTC para o intervalo civil de São Paulo. */
+export function saoPauloClosedRange(fromDay: string, toDay: string): { from: string; to: string } {
+  return { from: `${fromDay}T03:00:00.000Z`, to: `${addDays(toDay, 1)}T03:00:00.000Z` };
+}
+
 function dayGap(left: string, right: string): number {
   return Math.round(Math.abs(parseISODate(left).getTime() - parseISODate(right).getTime()) / 86_400_000);
 }

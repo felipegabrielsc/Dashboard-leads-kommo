@@ -1,5 +1,8 @@
 import { addDays } from "@/lib/format";
 
+/** Início amplo o bastante para cobrir o histórico comercial sem filtro de período. */
+export const ALL_TIME_FROM = "2015-01-01";
+
 export function localToday(): string {
   const now = new Date();
   const month = String(now.getMonth() + 1).padStart(2, "0");
@@ -31,6 +34,7 @@ export function commercialSearch(input: {
 
 export function periodPresets(today = localToday()) {
   return [
+    { id: "total", label: "Período total", from: ALL_TIME_FROM, to: today },
     { id: "mes", label: "Este mês", from: monthStart(today), to: today },
     { id: "30", label: "30 dias", from: addDays(today, -29), to: today },
     { id: "7", label: "7 dias", from: addDays(today, -6), to: today },

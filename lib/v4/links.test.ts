@@ -1,5 +1,15 @@
 import assert from "node:assert/strict";
-import { acceptImportLinks, allowFollowing, carryLinks, followingPurchases, inheritedLinks, leadConflict, manualOverlaps, rankLinkCandidates } from "./links";
+import {
+  acceptImportLinks,
+  allowFollowing,
+  carryLinks,
+  followingPurchases,
+  inheritedLinks,
+  leadConflict,
+  manualOverlaps,
+  rankLinkCandidates,
+  saoPauloClosedRange,
+} from "./links";
 import { parseManualRepurchase } from "./manual";
 import type { V4Row } from "./types";
 
@@ -185,5 +195,9 @@ assert.deepEqual(
     [3, "m2"],
   ],
 );
+
+const range = saoPauloClosedRange("2026-04-10", "2026-04-25");
+assert.equal(range.from, "2026-04-10T03:00:00.000Z");
+assert.equal(range.to, "2026-04-26T03:00:00.000Z");
 
 console.log("v4 links ok");

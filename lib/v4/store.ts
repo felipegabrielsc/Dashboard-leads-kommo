@@ -2,12 +2,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { kommoCredentials, leadUrl } from "../kommo/client";
 import { kommoStore } from "../kommo/db";
 import { dayInSaoPaulo } from "../kommo/metrics";
-import { errorText } from "../kommo/rpcError";
+import { errorText, relationMissing } from "../kommo/rpcError";
 import {
   candidateWindow,
   followingPurchases,
   leadConflict,
   rankLinkCandidates,
+  saoPauloClosedRange,
   type LeadUse,
   type LinkCandidate,
   type ManualSale,
@@ -245,10 +246,8 @@ export async function loadLinkCandidates(
     query = query.ilike("name", `%${term}%`).order("closed_at", { ascending: false }).limit(60);
   } else {
     window = candidateWindow(sale.sale_date);
-    query = query
-      .gte("closed_at", `${window.from}T03:00:00.000Z`)
-      .lt("closed_at", `${window.to}T03:00:00.000Z`)
-      .limit(2000);
+    const range = saoPauloClosedRange(window.from, window.to);
+    query = query.gte("closed_at", range.from).lt("closed_at", range.to).limit(2000);
   }
   const { data, error } = await query;
   if (error) throw error;
@@ -280,6 +279,35 @@ export async function loadLinkCandidates(
 
 export type LinkOptions = { counted: boolean; following: boolean };
 
+type LinkPatch = {
+  kommo_lead_id: number | null;
+  already_in_kommo: boolean;
+  linked_by?: string;
+  linked_at?: string;
+};
+
+async function writeLinkPatch(
+  supabase: SupabaseClient,
+  ids: string[],
+  patch: LinkPatch,
+): Promise<void> {
+  if (!ids.length) return;
+  const withMeta = { ...patch };
+  let result = await supabase.from("v4_sales").update(withMeta).in("id", ids).select("id");
+  if (result.error && columnMissing(result.error) && ("linked_by" in withMeta || "linked_at" in withMeta)) {
+    const { linked_by: _by, linked_at: _at, ...core } = withMeta;
+    result = await supabase.from("v4_sales").update(core).in("id", ids).select("id");
+    if (result.error && columnMissing(result.error)) throw new V4StoreError(MIGRATION_HINT, 503);
+  }
+  if (result.error) {
+    if (columnMissing(result.error)) throw new V4StoreError(MIGRATION_HINT, 503);
+    throw result.error;
+  }
+  if (ids.length === 1 && !(result.data || []).length) {
+    throw new V4StoreError("Não consegui gravar o vínculo. Atualize a página e tente de novo.", 409);
+  }
+}
+
 export async function linkSale(
   supabase: SupabaseClient,
   saleId: string,
@@ -310,22 +338,25 @@ export async function linkSale(
     throw new V4StoreError("O valor deste negócio já está contado em outra venda deste cliente. Vincule sem tirar da soma.", 409);
   }
   const now = new Date().toISOString();
-  const update = await supabase
-    .from("v4_sales")
-    .update({ kommo_lead_id: leadId, already_in_kommo: options.counted, linked_by: userId, linked_at: now })
-    .eq("id", sale.id);
-  if (update.error) throw update.error;
+  await writeLinkPatch(supabase, [sale.id], {
+    kommo_lead_id: leadId,
+    already_in_kommo: options.counted,
+    linked_by: userId,
+    linked_at: now,
+  });
   if (!options.following) return { following: 0 };
   const targets = followingPurchases(sale.id, await customerSales(supabase, batchId, customerKey))
     .filter((item) => item.kommoLeadId == null)
     .map((item) => item.id);
   if (!targets.length) return { following: 0 };
-  const cascade = await supabase
-    .from("v4_sales")
-    .update({ kommo_lead_id: leadId, already_in_kommo: false, linked_by: userId, linked_at: now })
-    .in("id", targets)
-    .is("kommo_lead_id", null);
-  if (cascade.error) throw cascade.error;
+  for (let index = 0; index < targets.length; index += 100) {
+    await writeLinkPatch(supabase, targets.slice(index, index + 100), {
+      kommo_lead_id: leadId,
+      already_in_kommo: false,
+      linked_by: userId,
+      linked_at: now,
+    });
+  }
   return { following: targets.length };
 }
 
@@ -339,17 +370,32 @@ export async function unlinkSale(
   const batchId = await assertCurrent(supabase, sale);
   const leadId = sale.kommo_lead_id == null ? null : Number(sale.kommo_lead_id);
   const now = new Date().toISOString();
-  const cleared = { kommo_lead_id: null, already_in_kommo: false, linked_by: userId, linked_at: now };
-  const { error } = await supabase.from("v4_sales").update(cleared).eq("id", sale.id);
-  if (error) throw error;
+  const cleared: LinkPatch = { kommo_lead_id: null, already_in_kommo: false, linked_by: userId, linked_at: now };
+  await writeLinkPatch(supabase, [sale.id], cleared);
   if (!following || leadId == null) return { following: 0 };
   const targets = followingPurchases(sale.id, await customerSales(supabase, batchId, String(sale.customer_key || "")))
     .filter((item) => item.kommoLeadId === leadId && !item.alreadyInKommo)
     .map((item) => item.id);
   if (!targets.length) return { following: 0 };
-  const cascade = await supabase.from("v4_sales").update(cleared).in("id", targets);
-  if (cascade.error) throw cascade.error;
+  for (let index = 0; index < targets.length; index += 100) {
+    await writeLinkPatch(supabase, targets.slice(index, index + 100), cleared);
+  }
   return { following: targets.length };
+}
+
+export async function deleteImportBatch(supabase: SupabaseClient, batchId: string): Promise<{ id: string; wasActive: boolean }> {
+  if (!/^[0-9a-f-]{36}$/i.test(batchId)) throw new V4StoreError("Importação não encontrada.", 404);
+  const { data, error } = await supabase.from("v4_import_batches").select("id,status").eq("id", batchId).maybeSingle();
+  if (error) {
+    if (relationMissing(error)) throw new V4StoreError("Execute supabase/v4-vendas.sql no SQL Editor antes de continuar.", 503);
+    throw error;
+  }
+  if (!data) throw new V4StoreError("Importação não encontrada.", 404);
+  const wasActive = data.status === "active";
+  const removed = await supabase.from("v4_import_batches").delete().eq("id", batchId).select("id");
+  if (removed.error) throw removed.error;
+  if (!(removed.data || []).length) throw new V4StoreError("Não consegui remover esta planilha.", 409);
+  return { id: batchId, wasActive };
 }
 
 export async function previousLinks(supabase: SupabaseClient): Promise<PreviousLink[]> {
